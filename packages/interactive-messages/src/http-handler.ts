@@ -1,16 +1,20 @@
-/* tslint:disable import-name */
 import { ServerResponse, IncomingHttpHeaders, IncomingMessage } from 'http';
 import * as querystring from 'querystring';
 import debugFactory from 'debug';
 import getRawBody from 'raw-body';
 import crypto from 'crypto';
 import timingSafeCompare from 'tsscmp';
+// eslint-disable-next-line import/no-named-as-default
 import SlackMessageAdapter from './adapter';
 import { ErrorCode, errorWithCode } from './errors';
 import { packageIdentifier, isFalsy } from './util';
 
 const debug = debugFactory('@slack/interactive-messages:http-handler');
 
+/**
+ * Creates a HTTP handler for a given adapter
+ * @param adapter adapter to handle
+ */
 export function createHTTPHandler(adapter: SlackMessageAdapter): HTTPHandler {
   const poweredBy = packageIdentifier();
 
@@ -96,6 +100,8 @@ export function createHTTPHandler(adapter: SlackMessageAdapter): HTTPHandler {
   /**
    * Request listener used to handle Slack requests and send responses and
    * verify request signatures
+   * @param req request received
+   * @param res response being sent
    */
   return (req, res) => {
     debug('request received - method: %s, path: %s', req.method, req.url);
@@ -107,9 +113,8 @@ export function createHTTPHandler(adapter: SlackMessageAdapter): HTTPHandler {
     if (!isFalsy(req.body) && isFalsy(req.rawBody)) {
       respond({
         status: 500,
-        content: process.env.NODE_ENV === 'development'
-          ? 'Parsing request body prohibits request signature verification'
-          : undefined,
+        content: process.env.NODE_ENV === 'development' ?
+          'Parsing request body prohibits request signature verification' : undefined,
       });
       return;
     }
@@ -145,7 +150,7 @@ export function createHTTPHandler(adapter: SlackMessageAdapter): HTTPHandler {
 
           if (dispatchResult !== undefined) {
             // TODO: handle this after responding?
-            // tslint:disable-next-line no-floating-promises
+            // eslint-disable-next-line @typescript-eslint/no-floating-promises
             dispatchResult.then(respond);
           } else {
             // No callback was matched
@@ -168,17 +173,16 @@ export function createHTTPHandler(adapter: SlackMessageAdapter): HTTPHandler {
 /**
  * A RequestListener-compatible callback for creating response information from an incoming request.
  *
- * @remarks
  * See RequestListener in the `http` module.
  */
-type HTTPHandler = (req: IncomingMessage & { body?: any, rawBody?: Buffer }, res: ServerResponse) => void;
+type HTTPHandler = (req: IncomingMessage & { body?: any; rawBody?: Buffer }, res: ServerResponse) => void;
 
 /**
  * A response handler returned by `sendResponse`.
  */
 type ResponseHandler = (dispatchResult: {
-  status: number,
-  content?: string | object,
+  status: number;
+  content?: string | object;
 }) => void;
 
 /**

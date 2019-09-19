@@ -1,8 +1,16 @@
 import os from 'os';
 import { ErrorCode, errorWithCode } from './errors';
-const pkg = require('../package.json'); // tslint:disable-line
 
-function escape(s: string): string { return s.replace('/', ':').replace(' ', '_'); }
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const pkg = require('../package.json');
+
+/**
+ * Escapes slashes and spaces in a string
+ * @param s string to replace contents of
+ */
+function escape(s: string): string {
+  return s.replace('/', ':').replace(' ', '_');
+}
 
 export const errorCodes = {
   PROMISE_TIMEOUT: ErrorCode.PromiseTimeout,
@@ -39,6 +47,10 @@ export function promiseTimeout<T>(ms: number, promise: T | Promise<T>): Promise<
 // 2. access to `pkg` will change
 // 3. tests
 // there will potentially be more named exports in this file
+/**
+ * Determines the identifier for the current package
+ * @param addons Additional meta data
+ */
 export function packageIdentifier(addons: Record<string, string> = {}): string {
   const identifierMap = Object.assign(
     {
@@ -58,5 +70,5 @@ export function packageIdentifier(addons: Record<string, string> = {}): string {
  */
 export function isFalsy(x: any): x is 0 | '' | null | undefined {
   // NOTE: there's no way to type `x is NaN` currently (as of TypeScript v3.5)
-  return x === 0 || x === '' || x === null || x === undefined || (typeof x === 'number' && isNaN(x));
+  return x === 0 || x === '' || x === null || x === undefined || (typeof x === 'number' && Number.isNaN(x));
 }

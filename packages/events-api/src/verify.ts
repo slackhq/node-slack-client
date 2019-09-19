@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 
 import yargs from 'yargs';
-import { createEventAdapter } from './index';
 import { AddressInfo } from 'net';
+import { createEventAdapter } from './index';
 
-const argv = yargs
+const { argv } = yargs
   .options({
     secret: {
       alias: 's',
@@ -27,8 +27,7 @@ const argv = yargs
       type: 'number',
     },
   })
-  .help()
-  .argv;
+  .help();
 
 const slackEvents = createEventAdapter(argv.secret);
 
@@ -38,10 +37,12 @@ slackEvents
     server.on('error', reject);
     server.listen(argv.port, () => {
       const { address, port } = server.address() as AddressInfo;
+      // eslint-disable-next-line no-console
       console.log(`The verification server is now listening at the URL: http://${address}:${port}${argv.path}`);
       resolve();
     });
   }))
   .catch((error) => {
+    // eslint-disable-next-line no-console
     console.error(`The verification server failed to start. error: ${error.message}`);
   });

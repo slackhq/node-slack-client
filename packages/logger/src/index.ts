@@ -1,3 +1,5 @@
+/* eslint-disable no-console */
+
 /**
  * Severity levels for log entries
  */
@@ -68,16 +70,17 @@ export interface Logger {
 export class ConsoleLogger implements Logger {
   /** Setting for level */
   private level: LogLevel;
+
   /** Name */
   private name: string;
+
   /** Map of labels for each log level */
   private static labels: Map<LogLevel, string> = (() => {
     const entries = Object.entries(LogLevel) as ([string, LogLevel])[];
-    const map = entries.map(([key, value]) => {
-      return [value, `[${key}] `] as [LogLevel, string];
-    });
+    const map = entries.map(([key, value]) => [value, `[${key}] `] as [LogLevel, string]);
     return new Map(map);
   })();
+
   /** Map of severity as comparable numbers for each log level */
   private static severity: { [key in LogLevel]: number } = {
     [LogLevel.ERROR]: 400,
@@ -86,7 +89,8 @@ export class ConsoleLogger implements Logger {
     [LogLevel.DEBUG]: 100,
   };
 
-  constructor() {
+  /** constructor */
+  public constructor() {
     this.level = LogLevel.INFO;
     this.name = '';
   }
@@ -97,6 +101,7 @@ export class ConsoleLogger implements Logger {
 
   /**
    * Sets the instance's log level so that only messages which are equal or more severe are output to the console.
+   * @param level level of logger
    */
   public setLevel(level: LogLevel): void {
     this.level = level;
@@ -104,6 +109,7 @@ export class ConsoleLogger implements Logger {
 
   /**
    * Set the instance's name, which will appear on each log line before the message.
+   * @param name name of logger
    */
   public setName(name: string): void {
     this.name = name;
@@ -111,30 +117,37 @@ export class ConsoleLogger implements Logger {
 
   /**
    * Log a debug message
+   * @param msg messages to log
    */
   public debug(...msg: any[]): void {
     if (ConsoleLogger.isMoreOrEqualSevere(LogLevel.DEBUG, this.level)) {
       console.debug(ConsoleLogger.labels.get(LogLevel.DEBUG), this.name, ...msg);
     }
   }
+
   /**
    * Log an info message
+   * @param msg messages to log
    */
   public info(...msg: any[]): void {
     if (ConsoleLogger.isMoreOrEqualSevere(LogLevel.INFO, this.level)) {
       console.info(ConsoleLogger.labels.get(LogLevel.INFO), this.name, ...msg);
     }
   }
+
   /**
    * Log a warning message
+   * @param msg messages to log
    */
   public warn(...msg: any[]): void {
     if (ConsoleLogger.isMoreOrEqualSevere(LogLevel.WARN, this.level)) {
       console.warn(ConsoleLogger.labels.get(LogLevel.WARN), this.name, ...msg);
     }
   }
+
   /**
    * Log an error message
+   * @param msg messages to log
    */
   public error(...msg: any[]): void {
     if (ConsoleLogger.isMoreOrEqualSevere(LogLevel.ERROR, this.level)) {
@@ -144,6 +157,8 @@ export class ConsoleLogger implements Logger {
 
   /**
    * Helper to compare two log levels and determine if a is equal or more severe than b
+   * @param a first log level to compare
+   * @param b second log level to compare
    */
   private static isMoreOrEqualSevere(a: LogLevel, b: LogLevel): boolean {
     return ConsoleLogger.severity[a] >= ConsoleLogger.severity[b];

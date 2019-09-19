@@ -48,6 +48,8 @@ export interface WebAPIRateLimitedError extends CodedError {
 
 /**
  * Factory for producing a {@link CodedError} from a generic error
+ * @param error error thrown
+ * @param code error code to append
  */
 function errorWithCode(error: Error, code: ErrorCode): CodedError {
   // NOTE: might be able to return something more specific than a CodedError with conditional typing
@@ -89,7 +91,7 @@ export function httpErrorFromResponse(response: AxiosResponse): WebAPIHTTPError 
  * A factory to create WebAPIPlatformError objects
  * @param result - Web API call result
  */
-export function platformErrorFromResult(result: WebAPICallResult & { error: string; }): WebAPIPlatformError {
+export function platformErrorFromResult(result: WebAPICallResult & { error: string }): WebAPIPlatformError {
   const error = errorWithCode(
     new Error(`An API error occurred: ${result.error}`),
     ErrorCode.PlatformError,

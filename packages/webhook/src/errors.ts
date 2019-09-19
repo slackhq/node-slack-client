@@ -29,6 +29,8 @@ export interface IncomingWebhookHTTPError extends CodedError {
 
 /**
  * Factory for producing a {@link CodedError} from a generic error
+ * @param error Error thrown
+ * @param code Code to attach
  */
 function errorWithCode(error: Error, code: ErrorCode): CodedError {
   // NOTE: might be able to return something more specific than a CodedError with conditional typing

@@ -23,7 +23,8 @@ export enum ErrorCode {
   KeepAliveInconsistentState = 'slack_rtmapi_keepalive_inconsistent_state',
 }
 
-export type RTMCallError = RTMPlatformError | RTMWebsocketError | RTMNoReplyReceivedError
+export type RTMCallError =
+  RTMPlatformError | RTMWebsocketError | RTMNoReplyReceivedError
   | RTMSendWhileDisconnectedError | RTMSendWhileNotReadyError;
 
 export interface RTMPlatformError extends CodedError {
@@ -50,6 +51,8 @@ export interface RTMSendWhileNotReadyError extends CodedError {
 
 /**
  * Factory for producing a {@link CodedError} from a generic error
+ * @param error error being converted
+ * @param code code being appended
  */
 function errorWithCode(error: Error, code: ErrorCode): CodedError {
   // NOTE: might be able to return something more specific than a CodedError with conditional typing
@@ -58,9 +61,10 @@ function errorWithCode(error: Error, code: ErrorCode): CodedError {
   return codedError as CodedError;
 }
 
- /**
-  * A factory to create RTMWebsocketError objects.
-  */
+/**
+ * A factory to create RTMWebsocketError objects.
+ * @param original error being converted
+ */
 export function websocketErrorWithOriginal(original: Error): RTMWebsocketError {
   const error = errorWithCode(
     new Error(`Failed to send message on websocket: ${original.message}`),
@@ -70,10 +74,11 @@ export function websocketErrorWithOriginal(original: Error): RTMWebsocketError {
   return (error as RTMWebsocketError);
 }
 
- /**
-  * A factory to create RTMPlatformError objects.
-  */
-export function platformErrorFromEvent(event: RTMCallResult & { error: { msg: string; } }): RTMPlatformError {
+/**
+ * A factory to create RTMPlatformError objects.
+ * @param event event being converted
+ */
+export function platformErrorFromEvent(event: RTMCallResult & { error: { msg: string } }): RTMPlatformError {
   const error = errorWithCode(
     new Error(`An API error occurred: ${event.error.msg}`),
     ErrorCode.SendMessagePlatformError,
@@ -82,9 +87,9 @@ export function platformErrorFromEvent(event: RTMCallResult & { error: { msg: st
   return (error as RTMPlatformError);
 }
 
- /**
-  * A factory to create RTMNoReplyReceivedError objects.
-  */
+/**
+ * A factory to create RTMNoReplyReceivedError objects.
+ */
 export function noReplyReceivedError(): RTMNoReplyReceivedError {
   return errorWithCode(
     new Error('Message sent but no server acknowledgement was received. This may be caused by the client ' +
@@ -93,9 +98,9 @@ export function noReplyReceivedError(): RTMNoReplyReceivedError {
   ) as RTMNoReplyReceivedError;
 }
 
- /**
-  * A factory to create RTMSendWhileDisconnectedError objects.
-  */
+/**
+ * A factory to create RTMSendWhileDisconnectedError objects.
+ */
 export function sendWhileDisconnectedError(): RTMSendWhileDisconnectedError {
   return errorWithCode(
     new Error('Cannot send message when client is not connected'),
@@ -103,9 +108,10 @@ export function sendWhileDisconnectedError(): RTMSendWhileDisconnectedError {
   ) as RTMSendWhileDisconnectedError;
 }
 
- /**
-  * A factory to create RTMSendWhileNotReadyError objects.
-  */
+
+/**
+ * A factory to create RTMSendWhileNotReadyError objects.
+ */
 export function sendWhileNotReadyError(): RTMSendWhileNotReadyError {
   return errorWithCode(
     new Error('Cannot send message when client is not ready'),

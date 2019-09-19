@@ -1,4 +1,3 @@
-
 /*
  * Reusable shapes for argument values
  */
@@ -77,7 +76,8 @@ export interface Confirm {
  * Action Types
  */
 
-export type KnownAction = UsersSelect | StaticSelect | ConversationsSelect | ChannelsSelect | ExternalSelect |
+export type KnownAction =
+  UsersSelect | StaticSelect | ConversationsSelect | ChannelsSelect | ExternalSelect |
   Button | Overflow | Datepicker;
 
 export interface Action {
@@ -220,7 +220,7 @@ export interface AttachmentAction {
   name?: string;
   options?: OptionField[];
   option_groups?: {
-    text: string
+    text: string;
     options: OptionField[];
   }[];
   selected_options?: OptionField[];

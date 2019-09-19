@@ -1,19 +1,17 @@
-/* tslint:disable:import-name */
 import debugFactory from 'debug';
 import getRawBody from 'raw-body';
 import crypto from 'crypto';
 import timingSafeCompare from 'tsscmp';
-import { packageIdentifier, isFalsy } from './util';
-import SlackEventAdapter from './adapter';
 import { IncomingMessage, ServerResponse } from 'http';
-/* tslint:enable:import-name */
+import { packageIdentifier, isFalsy } from './util';
+// eslint-disable-next-line import/no-named-as-default
+import SlackEventAdapter from './adapter';
 
 const debug = debugFactory('@slack/events-api:http-handler');
 
 /**
  * Verifies the signature of a request.
  *
- * @remarks
  * See [Verifying requests from Slack](https://api.slack.com/docs/verifying-requests-from-slack#sdk_support) for more
  * information.
  *
@@ -45,6 +43,10 @@ export function verifyRequestSignature({
   return true;
 }
 
+/**
+ * Creates a HTTP handler for a slack adapter
+ * @param adapter slack adapter to wrap
+ */
 export function createHTTPHandler(adapter: SlackEventAdapter): HTTPHandler {
   const poweredBy = packageIdentifier();
 
@@ -115,7 +117,7 @@ export function createHTTPHandler(adapter: SlackEventAdapter): HTTPHandler {
         adapter.emit('error', error, respond);
       } else if (process.env.NODE_ENV === 'development') {
         adapter.emit('error', error);
-        // tslint:disable-next-line: no-object-literal-type-assertion
+        // eslint-disable-next-line @typescript-eslint/no-object-literal-type-assertion
         respond({ status: ResponseStatus.Failure } as ResponseError, { content: error.message });
       } else {
         adapter.emit('error', error);
@@ -218,10 +220,9 @@ enum ResponseStatus {
 /**
  * A RequestListener-compatible callback for creating response information from an incoming request.
  *
- * @remarks
  * See RequestListener in the `http` module.
  */
-type HTTPHandler = (req: IncomingMessage & { body?: any, rawBody?: Buffer }, res: ServerResponse) => void;
+export type HTTPHandler = (req: IncomingMessage & { body?: any; rawBody?: Buffer }, res: ServerResponse) => void;
 
 /**
  * A Node-style response handler that takes an error (if any occurred) and a few response-related options.
@@ -287,6 +288,8 @@ export interface CodedError extends Error {
 
 /**
  * Factory for producing a {@link CodedError} from a generic error.
+ * @param error error to inherit
+ * @param code error code to append
  */
 function errorWithCode(error: Error, code: ErrorCode): CodedError {
   const codedError = error as CodedError;

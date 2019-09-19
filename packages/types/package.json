@@ -31,13 +31,10 @@
     "prepare": "npm run build",
     "build": "npm run build:clean && tsc",
     "build:clean": "shx rm -rf ./dist",
-    "lint": "tslint --project .",
     "test": "npm run build && echo \"Tests are not implemented.\" && exit 0"
   },
   "devDependencies": {
     "shx": "^0.3.2",
-    "tslint": "^5.13.1",
-    "tslint-config-airbnb": "^5.11.1",
     "typescript": "^3.3.3333"
   }
 }

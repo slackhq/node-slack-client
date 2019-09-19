@@ -1,7 +1,6 @@
 const { assert } = require('chai');
 const sinon = require('sinon');
 const proxyquire = require('proxyquire');
-
 const { createRequest, createRawBodyRequest } = require('../test/helpers');
 
 const getRawBodyStub = sinon.stub();
@@ -12,163 +11,157 @@ const correctSigningSecret = 'SIGNING_SECRET';
 const correctRawBody = '{"type":"event_callback","event":{"type":"reaction_added","user":"U123","item":{"type":"messa' +
   'ge","channel":"C123"}}}';
 
-describe('http-handler', function () {
-  beforeEach(function () {
-    this.correctDate = Math.floor(Date.now() / 1000);
+describe('http-handler', () => {
+  let correctDate;
+
+  beforeEach(() => {
+    correctDate = Math.floor(Date.now() / 1000);
   });
 
-  describe('verifyRequestSignature', function () {
-    it('should return true for a valid request', function () {
-      const req = createRequest(correctSigningSecret, this.correctDate, correctRawBody);
+  describe('verifyRequestSignature', () => {
+    it('should return true for a valid request', () => {
+      const req = createRequest(correctSigningSecret, correctDate, correctRawBody);
       const isVerified = verifyRequestSignature({
         signingSecret: correctSigningSecret,
         requestTimestamp: req.headers['x-slack-request-timestamp'],
         requestSignature: req.headers['x-slack-signature'],
-        body: correctRawBody
+        body: correctRawBody,
       });
 
       assert.isTrue(isVerified);
     });
 
-    it('should throw for a request signed with a different secret', function () {
-      const req = createRequest(correctSigningSecret, this.correctDate, correctRawBody);
+    it('should throw for a request signed with a different secret', () => {
+      const req = createRequest(correctSigningSecret, correctDate, correctRawBody);
       assert.throws(() => verifyRequestSignature({
         signingSecret: 'INVALID_SECRET',
         requestTimestamp: req.headers['x-slack-request-timestamp'],
         requestSignature: req.headers['x-slack-signature'],
-        body: correctRawBody
+        body: correctRawBody,
       }), 'Slack request signing verification failed');
     });
   });
 
-  describe('createHTTPHandler', function () {
-    beforeEach(function () {
-      this.emit = sinon.stub();
-      this.res = sinon.stub({
-        setHeader: function () { },
-        send: function () { },
-        end: function () { }
+  describe('createHTTPHandler', () => {
+    let emit;
+    let res;
+    let next;
+    let requestListener;
+
+    beforeEach(() => {
+      emit = sinon.stub();
+      res = sinon.stub({
+        setHeader: () => { },
+        send: () => { },
+        end: () => { },
       });
-      this.next = sinon.stub();
-      this.correctDate = Math.floor(Date.now() / 1000);
-      this.requestListener = createHTTPHandler({
+      next = sinon.stub();
+      correctDate = Math.floor(Date.now() / 1000);
+      requestListener = createHTTPHandler({
         signingSecret: correctSigningSecret,
-        emit: this.emit
+        emit,
       });
     });
 
-    it('should verify a correct signing secret', function (done) {
-      const emit = this.emit;
-      const res = this.res;
-      const req = createRequest(correctSigningSecret, this.correctDate, correctRawBody);
+    it('should verify a correct signing secret', (done) => {
+      const req = createRequest(correctSigningSecret, correctDate, correctRawBody);
       emit.resolves({ status: 200 });
       getRawBodyStub.resolves(Buffer.from(correctRawBody));
-      res.end.callsFake(function () {
+      res.end.callsFake(() => {
         assert.equal(res.statusCode, 200);
         done();
       });
-      this.requestListener(req, res);
+      requestListener(req, res);
     });
 
-    it('should verify a correct signing secret for a request with rawBody attribute', function (done) {
-      const emit = this.emit;
-      const res = this.res;
-      const req = createRawBodyRequest(correctSigningSecret, this.correctDate, correctRawBody);
+    it('should verify a correct signing secret for a request with rawBody attribute', (done) => {
+      const req = createRawBodyRequest(correctSigningSecret, correctDate, correctRawBody);
       emit.resolves({ status: 200 });
       getRawBodyStub.resolves(Buffer.from(correctRawBody));
-      res.end.callsFake(function () {
+      res.end.callsFake(() => {
         assert.equal(res.statusCode, 200);
         done();
       });
-      this.requestListener(req, res);
+      requestListener(req, res);
     });
 
-    it('should fail request signing verification for a request with a body but no rawBody', function (done) {
-      const res = this.res;
-      const req = createRequest(correctSigningSecret, this.correctDate, correctRawBody);
+    it('should fail request signing verification for a request with a body but no rawBody', (done) => {
+      const req = createRequest(correctSigningSecret, correctDate, correctRawBody);
       req.body = {};
       getRawBodyStub.resolves(Buffer.from(correctRawBody));
-      res.end.callsFake(function () {
+      res.end.callsFake(() => {
         assert.equal(res.statusCode, 500);
         done();
       });
-      this.requestListener(req, res);
+      requestListener(req, res);
     });
 
-    it('should fail request signing verification with an incorrect signing secret', function (done) {
-      const res = this.res;
-      const req = createRequest('INVALID_SECRET', this.correctDate, correctRawBody);
+    it('should fail request signing verification with an incorrect signing secret', (done) => {
+      const req = createRequest('INVALID_SECRET', correctDate, correctRawBody);
       getRawBodyStub.resolves(Buffer.from(correctRawBody));
-      res.end.callsFake(function () {
+      res.end.callsFake(() => {
         assert.equal(res.statusCode, 404);
         done();
       });
-      this.requestListener(req, res);
+      requestListener(req, res);
     });
 
-    it('should fail request signing verification with old timestamp', function (done) {
-      const res = this.res;
+    it('should fail request signing verification with old timestamp', (done) => {
       const sixMinutesAgo = Math.floor(Date.now() / 1000) - (60 * 6);
       const req = createRequest(correctSigningSecret, sixMinutesAgo, correctRawBody);
       getRawBodyStub.resolves(Buffer.from(correctRawBody));
-      res.end.callsFake(function () {
+      res.end.callsFake(() => {
         assert.equal(res.statusCode, 404);
         done();
       });
-      this.requestListener(req, res);
+      requestListener(req, res);
     });
 
-    it('should handle unexpected error', function (done) {
-      const res = this.res;
-      const req = createRequest(correctSigningSecret, this.correctDate, correctRawBody);
+    it('should handle unexpected error', (done) => {
+      const req = createRequest(correctSigningSecret, correctDate, correctRawBody);
       getRawBodyStub.rejects(new Error('test error'));
-      res.end.callsFake(function (result) {
+      res.end.callsFake((result) => {
         assert.equal(res.statusCode, 500);
         assert.isUndefined(result);
         done();
       });
-      this.requestListener(req, res);
+      requestListener(req, res);
     });
 
-    it('should provide message with unexpected errors in development', function (done) {
-      const res = this.res;
-      const req = createRequest(correctSigningSecret, this.correctDate, correctRawBody);
+    it('should provide message with unexpected errors in development', (done) => {
+      const req = createRequest(correctSigningSecret, correctDate, correctRawBody);
       process.env.NODE_ENV = 'development';
       getRawBodyStub.rejects(new Error('test error'));
-      res.end.callsFake(function (result) {
+      res.end.callsFake((result) => {
         assert.equal(res.statusCode, 500);
         assert.equal(result, 'test error');
         delete process.env.NODE_ENV;
         done();
       });
-      this.requestListener(req, res);
+      requestListener(req, res);
     });
 
-    it('should set an identification header in its responses', function (done) {
-      const emit = this.emit;
-      const res = this.res;
-      const req = createRequest(correctSigningSecret, this.correctDate, correctRawBody);
+    it('should set an identification header in its responses', (done) => {
+      const req = createRequest(correctSigningSecret, correctDate, correctRawBody);
       emit.resolves({ status: 200 });
       getRawBodyStub.resolves(Buffer.from(correctRawBody));
-      res.end.callsFake(function () {
+      res.end.callsFake(() => {
         assert(res.setHeader.calledWith('X-Slack-Powered-By'));
         done();
       });
-      this.requestListener(req, res);
+      requestListener(req, res);
     });
 
-    it('should respond to url verification requests', function (done) {
-      const res = this.res;
-      const emit = this.emit;
+    it('should respond to url verification requests', (done) => {
       const urlVerificationBody = '{"type":"url_verification","challenge": "TEST_CHALLENGE"}';
-      const req = createRequest(correctSigningSecret, this.correctDate, urlVerificationBody);
+      const req = createRequest(correctSigningSecret, correctDate, urlVerificationBody);
       getRawBodyStub.resolves(Buffer.from(urlVerificationBody));
-      res.end.callsFake(function () {
+      res.end.callsFake(() => {
         assert(emit.notCalled);
         assert.equal(res.statusCode, 200);
         done();
       });
-      this.requestListener(req, res);
+      requestListener(req, res);
     });
   });
 });

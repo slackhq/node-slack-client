@@ -1,9 +1,16 @@
 {
   "scripts": {
     "test": "lerna run test",
-    "lint": "lerna run lint"
+    "lint": "eslint \"packages/*/src/**/*.{ts,js}\""
   },
   "devDependencies": {
-    "lerna": "^3.13.1"
+    "@typescript-eslint/eslint-plugin": "^1.11.0",
+    "@typescript-eslint/parser": "^1.11.0",
+    "eslint": "^6.0.1",
+    "eslint-config-airbnb-base": "^13.1.0",
+    "eslint-plugin-import": "^2.18.0",
+    "eslint-plugin-jsdoc": "^15.3.4",
+    "lerna": "^3.13.1",
+    "typescript": "^3.5.2"
   }
 }

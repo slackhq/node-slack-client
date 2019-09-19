@@ -1,8 +1,8 @@
 import { Agent } from 'http';
 import axios, { AxiosInstance, AxiosResponse } from 'axios';
+import { MessageAttachment, Block, KnownBlock } from '@slack/types';
 import { httpErrorWithOriginal, requestErrorWithOriginal } from './errors';
 import { getUserAgent } from './instrument';
-import { MessageAttachment, Block, KnownBlock } from '@slack/types';
 
 /**
  * A client for Slack's Incoming Webhooks
@@ -23,7 +23,11 @@ export class IncomingWebhook {
    */
   private axios: AxiosInstance;
 
-  constructor(url: string, defaults: IncomingWebhookDefaultArguments = {}) {
+  /**
+   * @param url WebHook URL
+   * @param defaults Default webhook arguments
+   */
+  public constructor(url: string, defaults: IncomingWebhookDefaultArguments = {}) {
     if (url === undefined) {
       throw new Error('Incoming webhook URL is required');
     }
@@ -76,6 +80,7 @@ export class IncomingWebhook {
 
   /**
    * Processes an HTTP response into an IncomingWebhookResult.
+   * @param response HTTP response
    */
   private buildResult(response: AxiosResponse): IncomingWebhookResult {
     return {

@@ -29,7 +29,6 @@
     "prepare": "npm run build",
     "build": "npm run build:clean && tsc",
     "build:clean": "shx rm -rf ./dist",
-    "lint": "tslint --project .",
     "test": "npm run build && nyc mocha --config .mocharc.json src/*.spec.js"
   },
   "dependencies": {
@@ -43,8 +42,6 @@
     "nyc": "^14.1.1",
     "shx": "^0.3.2",
     "ts-node": "^8.2.0",
-    "tslint": "^5.13.1",
-    "tslint-config-airbnb": "^5.11.1",
     "typescript": "^3.3.3333"
   }
 }

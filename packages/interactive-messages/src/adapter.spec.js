@@ -1,10 +1,7 @@
-require('mocha');
 const http = require('http');
 const { assert } = require('chai');
 const sinon = require('sinon');
-const nop = require('nop');
 const getRandomPort = require('get-random-port');
-
 const { createStreamRequest, delayed } = require('../test/helpers');
 const { default: SlackMessageAdapter } = require('./adapter');
 const { errorCodes } = require('./index');
@@ -14,124 +11,139 @@ const workingSigningSecret = 'SIGNING_SECRET';
 const workingRawBody = 'payload=%7B%22type%22%3A%22interactive_message%22%7D';
 
 // test suite
-describe('SlackMessageAdapter', function () {
-  describe('constructor', function () {
-    it('should build an instance', function () {
+describe('SlackMessageAdapter', () => {
+  describe('constructor', () => {
+    it('should build an instance', () => {
       const adapter = new SlackMessageAdapter(workingSigningSecret);
       assert.instanceOf(adapter, SlackMessageAdapter);
       assert.equal(adapter.syncResponseTimeout, 2500);
     });
-    it('should fail without a signing secret', function () {
-      assert.throws(function () {
+
+    it('should fail without a signing secret', () => {
+      assert.throws(() => {
         const adapter = new SlackMessageAdapter();
       }, TypeError);
     });
-    it('should allow configuring of the synchronous response timeout', function () {
+
+    it('should allow configuring of the synchronous response timeout', () => {
       const newValue = 20;
       const adapter = new SlackMessageAdapter(workingSigningSecret, {
-        syncResponseTimeout: newValue
+        syncResponseTimeout: newValue,
       });
       assert.equal(adapter.syncResponseTimeout, newValue);
     });
-    it('should fail when the synchronous response timeout is out of range', function () {
-      assert.throws(function () {
+
+    it('should fail when the synchronous response timeout is out of range', () => {
+      assert.throws(() => {
         const a = new SlackMessageAdapter(workingSigningSecret, { syncResponseTimeout: 0 });
       }, TypeError);
-      assert.throws(function () {
+      assert.throws(() => {
         const a = new SlackMessageAdapter(workingSigningSecret, { syncResponseTimeout: 3001 });
       }, TypeError);
     });
   });
 
-  describe('#createServer()', function () {
-    beforeEach(function () {
-      this.adapter = new SlackMessageAdapter(workingSigningSecret);
+  describe('#createServer()', () => {
+    let adapter;
+
+    beforeEach(() => {
+      adapter = new SlackMessageAdapter(workingSigningSecret);
     });
 
-    it('should return a Promise of an http.Server', function () {
-      return this.adapter.createServer().then(function (server) {
+    it('should return a Promise of an http.Server', () => {
+      return adapter.createServer().then((server) => {
         assert.instanceOf(server, http.Server);
       });
     });
   });
 
-  describe('#start()', function () {
-    beforeEach(function (done) {
-      const self = this;
-      self.adapter = new SlackMessageAdapter(workingSigningSecret);
-      getRandomPort(function (error, port) {
+  describe('#start()', () => {
+    let adapter;
+    let portNumber;
+
+    beforeEach((done) => {
+      adapter = new SlackMessageAdapter(workingSigningSecret);
+      getRandomPort((error, port) => {
         if (error) return done(error);
-        self.portNumber = port;
+        portNumber = port;
         return done();
       });
     });
-    afterEach(function () {
-      return this.adapter.stop().catch(nop);
+
+    afterEach(() => {
+      return adapter.stop().catch(() => {});
     });
-    it('should return a Promise for a started http.Server', function () {
-      const self = this;
-      return this.adapter.start(self.portNumber).then(function (server) {
+
+    it('should return a Promise for a started http.Server', () => {
+      return adapter.start(portNumber).then((server) => {
         // only works in node >= 5.7.0
         // assert(server.listening);
-        assert.equal(server.address().port, self.portNumber);
+        assert.equal(server.address().port, portNumber);
       });
     });
   });
 
-  describe('#stop()', function () {
-    beforeEach(function (done) {
-      const self = this;
-      self.adapter = new SlackMessageAdapter(workingSigningSecret);
-      getRandomPort(function (error, port) {
+  describe('#stop()', () => {
+    let adapter;
+    let portNumber;
+    let server;
+
+    beforeEach((done) => {
+      adapter = new SlackMessageAdapter(workingSigningSecret);
+      getRandomPort((error, port) => {
         if (error) return done(error);
-        return self.adapter.start(port)
-          .then(function (server) {
-            self.server = server;
+        return adapter.start(port)
+          .then((srv) => {
+            server = srv;
             done();
           })
           .catch(done);
       });
     });
-    afterEach(function () {
-      return this.adapter.stop().catch(nop);
+
+    afterEach(() => {
+      return adapter.stop().catch(() => {});
     });
-    it('should return a Promise and the server should be stopped', function () {
-      const self = this;
-      return this.adapter.stop().then(function () {
-        assert(!self.server.listening);
+
+    it('should return a Promise and the server should be stopped', () => {
+      return adapter.stop().then(() => {
+        assert(!server.listening);
       });
     });
   });
 
-  describe('#expressMiddleware()', function () {
-    beforeEach(function () {
-      this.adapter = new SlackMessageAdapter(workingSigningSecret);
-      this.next = sinon.stub();
-      this.dispatch = sinon.stub();
-      this.res = sinon.stub({
-        setHeader: function () { },
-        end: function () { }
+  describe('#expressMiddleware()', () => {
+    let adapter;
+    let next;
+    let dispatch;
+    let res;
+    let errFn;
+
+    beforeEach(() => {
+      adapter = new SlackMessageAdapter(workingSigningSecret);
+      next = sinon.stub();
+      dispatch = sinon.stub();
+      res = sinon.stub({
+        setHeader: () => { },
+        end: () => { },
       });
-      this.errFn = sinon.stub();
+      errFn = sinon.stub();
     });
 
-    it('should return a function', function () {
-      const middleware = this.adapter.expressMiddleware();
+    it('should return a function', () => {
+      const middleware = adapter.expressMiddleware();
       assert.isFunction(middleware);
     });
-    it('should verify correctly signed request bodies', function (done) {
+
+    it('should verify correctly signed request bodies', (done) => {
       const ts = Math.floor(Date.now() / 1000);
-      const adapter = this.adapter;
       const middleware = adapter.expressMiddleware();
-      const dispatch = this.dispatch;
-      const res = this.res;
-      const next = this.next;
       adapter.dispatch = dispatch;
       // Create streamed request
       const req = createStreamRequest(workingSigningSecret, ts, workingRawBody);
 
       dispatch.resolves({ status: 200 });
-      res.end.callsFake(function () {
+      res.end.callsFake(() => {
         assert(dispatch.called);
         assert.equal(res.statusCode, 200);
         done();
@@ -140,12 +152,15 @@ describe('SlackMessageAdapter', function () {
     });
   });
 
-  describe('#requestListener()', function () {
-    beforeEach(function () {
-      this.adapter = new SlackMessageAdapter(workingSigningSecret);
+  describe('#requestListener()', () => {
+    let adapter;
+
+    beforeEach(() => {
+      adapter = new SlackMessageAdapter(workingSigningSecret);
     });
-    it('should return a function', function () {
-      const middleware = this.adapter.requestListener();
+
+    it('should return a function', () => {
+      const middleware = adapter.requestListener();
       assert.isFunction(middleware);
     });
   });
@@ -155,15 +170,13 @@ describe('SlackMessageAdapter', function () {
    * Encapsulates knowledge of adapter handler registration internals and asserts that a handler
    * was registered.
    *
-   * @param {SlackMessageAdapter} adapter actual instance where handler should be registered
-   * @param {Function} handler expected registered function
-   * @param {Object} [constraints] expected constraints for which handler should be registered
+   * @param adapter actual instance where handler should be registered
+   * @param handler expected registered function
+   * @param [constraints] expected constraints for which handler should be registered
    */
   function assertHandlerRegistered(adapter, handler, constraints) {
-    let callbackEntry;
-
     assert.isNotEmpty(adapter.callbacks);
-    callbackEntry = adapter.callbacks.find(function (aCallbackEntry) {
+    const callbackEntry = adapter.callbacks.find((aCallbackEntry) => {
       return handler === aCallbackEntry[1];
     });
     assert.isOk(callbackEntry);
@@ -174,231 +187,248 @@ describe('SlackMessageAdapter', function () {
 
   /**
    * Encapsulates knowledge of adapter handler registration internals and unregisters all handlers.
-   * @param {SlackMessageAdapter} adapter
+   * @param adapter adapter to remove handlers from
    */
   function unregisterAllHandlers(adapter) {
     adapter.callbacks = [];
   }
 
   // shared tests
-  function shouldRegisterWithCallbackId(methodName) {
-    describe('when registering with a callback_id', function () {
-      beforeEach(function () {
-        this.handler = function () { };
+  function shouldRegisterWithCallbackId(methodName, getAdapter) {
+    describe('when registering with a callback_id', () => {
+      let handler;
+      let adapter;
+
+      beforeEach(() => {
+        handler = () => { };
+        adapter = getAdapter();
       });
-      it('a plain string callback_id registers successfully', function () {
-        this.adapter[methodName]('my_callback', this.handler);
-        assertHandlerRegistered(this.adapter, this.handler);
+
+      it('a plain string callback_id registers successfully', () => {
+        adapter[methodName]('my_callback', handler);
+        assertHandlerRegistered(adapter, handler);
       });
-      it('a RegExp callback_id registers successfully', function () {
-        this.adapter[methodName](/\w+_callback/, this.handler);
-        assertHandlerRegistered(this.adapter, this.handler);
+
+      it('a RegExp callback_id registers successfully', () => {
+        adapter[methodName](/\w+_callback/, handler);
+        assertHandlerRegistered(adapter, handler);
       });
-      it('invalid callback_id types throw on registration', function () {
-        const handler = this.handler;
-        const adapter = this.adapter;
-        assert.throws(function () {
+
+      it('invalid callback_id types throw on registration', () => {
+        assert.throws(() => {
           adapter[methodName](5, handler);
         }, TypeError);
-        assert.throws(function () {
+        assert.throws(() => {
           adapter[methodName](true, handler);
         }, TypeError);
-        assert.throws(function () {
+        assert.throws(() => {
           adapter[methodName]([], handler);
         }, TypeError);
-        assert.throws(function () {
+        assert.throws(() => {
           adapter[methodName](null, handler);
         }, TypeError);
-        assert.throws(function () {
+        assert.throws(() => {
           adapter[methodName](undefined, handler);
         }, TypeError);
       });
-      it('non-function callbacks throw on registration', function () {
-        const adapter = this.adapter;
-        assert.throws(function () {
+
+      it('non-function callbacks throw on registration', () => {
+        assert.throws(() => {
           adapter[methodName]('my_callback', 5);
         }, TypeError);
       });
     });
   }
 
-  describe('#action()', function () {
-    beforeEach(function () {
-      this.adapter = new SlackMessageAdapter(workingSigningSecret);
+  describe('#action()', () => {
+    let adapter;
+
+    beforeEach(() => {
+      adapter = new SlackMessageAdapter(workingSigningSecret);
     });
-    it('should fail action registration without handler', function () {
-      assert.throws(function () {
-        this.adapter.action('my_callback');
+
+    it('should fail action registration without handler', () => {
+      assert.throws(() => {
+        adapter.action('my_callback');
       }, TypeError);
     });
 
     // execute shared tests
-    shouldRegisterWithCallbackId('action');
+    shouldRegisterWithCallbackId('action', () => adapter);
 
-    describe('when registering with a complex set of constraints', function () {
-      beforeEach(function () {
-        this.actionHandler = function () { };
+    describe('when registering with a complex set of constraints', () => {
+      let actionHandler;
+      let handler;
+
+      beforeEach(() => {
+        actionHandler = () => { };
+        handler = () => { };
       });
-      it('should register with valid type constraints successfully', function () {
-        const adapter = this.adapter;
-        const actionHandler = this.actionHandler;
+
+      it('should register with valid type constraints successfully', () => {
         const constraintsSet = [
           { type: 'button' },
           { type: 'select' },
-          { type: 'dialog_submission' }
+          { type: 'dialog_submission' },
         ];
-        constraintsSet.forEach(function (constraints) {
+        constraintsSet.forEach((constraints) => {
           adapter.action(constraints, actionHandler);
           assertHandlerRegistered(adapter, actionHandler, constraints);
           unregisterAllHandlers(adapter);
         });
       });
-      it('should register with unfurl constraint successfully', function () {
+
+      it('should register with unfurl constraint successfully', () => {
         const constraints = { unfurl: true };
-        this.adapter.action(constraints, this.actionHandler);
-        assertHandlerRegistered(this.adapter, this.actionHandler, constraints);
+        adapter.action(constraints, actionHandler);
+        assertHandlerRegistered(adapter, actionHandler, constraints);
       });
-      it('should register with blockId constraints successfully', function () {
+
+      it('should register with blockId constraints successfully', () => {
         const constraints = { blockId: 'my_block' };
-        this.adapter.action(constraints, this.actionHandler);
-        assertHandlerRegistered(this.adapter, this.actionHandler, constraints);
+        adapter.action(constraints, actionHandler);
+        assertHandlerRegistered(adapter, actionHandler, constraints);
       });
-      it('invalid block_id types throw on registration', function () {
-        const handler = this.handler;
-        const adapter = this.adapter;
-        assert.throws(function () {
+
+      it('invalid block_id types throw on registration', () => {
+        assert.throws(() => {
           adapter.action({ blockId: 5 }, handler);
         }, TypeError);
-        assert.throws(function () {
+        assert.throws(() => {
           adapter.action({ blockId: true }, handler);
         }, TypeError);
-        assert.throws(function () {
+        assert.throws(() => {
           adapter.action({ blockId: [] }, handler);
         }, TypeError);
-        assert.throws(function () {
+        assert.throws(() => {
           adapter.action({ blockId: null }, handler);
         }, TypeError);
-        assert.throws(function () {
+        assert.throws(() => {
           adapter.action({ blockId: undefined }, handler);
         }, TypeError);
       });
-      it('should register with actionId constraints successfully', function () {
+
+      it('should register with actionId constraints successfully', () => {
         const constraints = { actionId: 'my_action' };
-        this.adapter.action(constraints, this.actionHandler);
-        assertHandlerRegistered(this.adapter, this.actionHandler, constraints);
+        adapter.action(constraints, actionHandler);
+        assertHandlerRegistered(adapter, actionHandler, constraints);
       });
-      it('invalid action_id types throw on registration', function () {
-        const handler = this.handler;
-        const adapter = this.adapter;
-        assert.throws(function () {
+
+      it('invalid action_id types throw on registration', () => {
+        assert.throws(() => {
           adapter.action({ actionId: 5 }, handler);
         }, TypeError);
-        assert.throws(function () {
+        assert.throws(() => {
           adapter.action({ actionId: true }, handler);
         }, TypeError);
-        assert.throws(function () {
+        assert.throws(() => {
           adapter.action({ actionId: [] }, handler);
         }, TypeError);
-        assert.throws(function () {
+        assert.throws(() => {
           adapter.action({ actionId: null }, handler);
         }, TypeError);
-        assert.throws(function () {
+        assert.throws(() => {
           adapter.action({ actionId: undefined }, handler);
         }, TypeError);
       });
-      it('should register with compound block constraints successfully', function () {
+
+      it('should register with compound block constraints successfully', () => {
         const constraints = { blockId: 'my_block', actionId: 'wham' };
-        this.adapter.action(constraints, this.actionHandler);
-        assertHandlerRegistered(this.adapter, this.actionHandler, constraints);
+        adapter.action(constraints, actionHandler);
+        assertHandlerRegistered(adapter, actionHandler, constraints);
       });
-      it('should register with valid compound constraints successfully', function () {
+
+      it('should register with valid compound constraints successfully', () => {
         const constraints = { callbackId: 'my_callback', type: 'button' };
-        this.adapter.action(constraints, this.actionHandler);
-        assertHandlerRegistered(this.adapter, this.actionHandler, constraints);
+        adapter.action(constraints, actionHandler);
+        assertHandlerRegistered(adapter, actionHandler, constraints);
       });
-      it('should throw when registering with invalid compound constraints', function () {
-        const adapter = this.adapter;
-        const actionHandler = this.actionHandler;
+
+      it('should throw when registering with invalid compound constraints', () => {
         // number isn't valid callbackId, all types are valid
         const constraints = { callbackId: 111, type: 'button' };
-        assert.throws(function () {
+        assert.throws(() => {
           adapter.action(constraints, actionHandler);
         }, TypeError);
       });
     });
   });
 
-  describe('#options()', function () {
-    beforeEach(function () {
-      this.adapter = new SlackMessageAdapter(workingSigningSecret);
+  describe('#options()', () => {
+    let adapter;
+
+    beforeEach(() => {
+      adapter = new SlackMessageAdapter(workingSigningSecret);
     });
-    it('should fail options registration without handler', function () {
-      assert.throws(function () {
-        this.adapter.options('my_callback');
+
+    it('should fail options registration without handler', () => {
+      assert.throws(() => {
+        adapter.options('my_callback');
       }, TypeError);
     });
 
     // execute shared tests
-    shouldRegisterWithCallbackId('options');
+    shouldRegisterWithCallbackId('options', () => adapter);
 
-    describe('when registering with a complex set of constraints', function () {
-      beforeEach(function () {
-        this.optionsHandler = function () { };
+    describe('when registering with a complex set of constraints', () => {
+      let optionsHandler;
+
+      beforeEach(() => {
+        optionsHandler = () => { };
       });
-      it('should register with valid from constraints successfully', function () {
-        const adapter = this.adapter;
-        const optionsHandler = this.optionsHandler;
+
+      it('should register with valid from constraints successfully', () => {
         const constraintsSet = [
           { within: 'interactive_message' },
-          { within: 'dialog' }
+          { within: 'dialog' },
         ];
-        constraintsSet.forEach(function (constraints) {
+        constraintsSet.forEach((constraints) => {
           adapter.options(constraints, optionsHandler);
           assertHandlerRegistered(adapter, optionsHandler, constraints);
           unregisterAllHandlers(adapter);
         });
       });
-      it('should throw when registering with invalid within constraints', function () {
-        const adapter = this.adapter;
-        const optionsHandler = this.optionsHandler;
+
+      it('should throw when registering with invalid within constraints', () => {
         const constraints = { within: 'not_a_real_options_source' };
-        assert.throws(function () {
+        assert.throws(() => {
           adapter.options(constraints, optionsHandler);
         }, TypeError);
       });
-      it('should register with valid compound constraints successfully', function () {
+
+      it('should register with valid compound constraints successfully', () => {
         const constraints = { callbackId: 'my_callback', within: 'dialog' };
-        this.adapter.options(constraints, this.optionsHandler);
-        assertHandlerRegistered(this.adapter, this.optionsHandler, constraints);
+        adapter.options(constraints, optionsHandler);
+        assertHandlerRegistered(adapter, optionsHandler, constraints);
       });
-      it('should throw when registering with invalid compound constraints', function () {
-        const adapter = this.adapter;
-        const optionsHandler = this.optionsHandler;
+
+      it('should throw when registering with invalid compound constraints', () => {
         const constraints = { callbackId: /\w+_callback/, within: 'not_a_real_options_source' };
-        assert.throws(function () {
+        assert.throws(() => {
           adapter.options(constraints, optionsHandler);
         }, TypeError);
       });
     });
   });
 
-  describe('#dispatch()', function () {
-    beforeEach(function () {
-      this.adapter = new SlackMessageAdapter(workingSigningSecret, {
+  describe('#dispatch()', () => {
+    let adapter;
+
+    beforeEach(() => {
+      adapter = new SlackMessageAdapter(workingSigningSecret, {
         // using a short timout to make tests finish faster
-        syncResponseTimeout: 50
+        syncResponseTimeout: 50,
       });
     });
 
     /**
      * Assert the result of a dispatch contains a certain message
-     * @param {Promise<object>} response actual return value of adapter.dispatch
-     * @param {number} status expected status
-     * @param {Object|string|undefined} content expected value of response body
-     * @returns {Promise<void>}
+     * @param response actual return value of adapter.dispatch
+     * @param status expected status
+     * @param content expected value of response body
      */
     function assertResponseStatusAndMessage(response, status, content) {
-      return response.then(function (res) {
+      return response.then((res) => {
         assert.equal(status, res.status);
         assert.deepEqual(content, res.content);
       });
@@ -410,26 +440,25 @@ describe('SlackMessageAdapter', function () {
      * If less than all of the messages are matched, if a request is mad and the body doesn't match
      * and messages, or if the url doesn't match the requestUrl, this will result in a timeout (a
      * promise that never resolves nor rejects).
-     * @param {SlackMessageAdapter} adapter actual adapter
-     * @param {string} requestUrl expected request URL
-     * @param {...Object|string} messages expected messages in request body
+     * @param messageAdapter actual adapter
+     * @param requestUrl expected request URL
      */
-    function assertPostRequestMadeWithMessages(adapter, requestUrl) {
+    function assertPostRequestMadeWithMessages(messageAdapter, requestUrl) {
+      // eslint-disable-next-line prefer-rest-params
       const messages = [].slice.call(arguments, 2);
-      const messagePromiseEntries = messages.map(function () {
+      const messagePromiseEntries = messages.map(() => {
         const entry = {};
-        entry.promise = new Promise(function (resolve) {
+        entry.promise = new Promise((resolve) => {
           entry.resolve = resolve;
         });
         return entry;
       });
 
-      sinon.stub(adapter.axios, 'post').callsFake(function (url, body) {
-        let messageIndex;
+      sinon.stub(messageAdapter.axios, 'post').callsFake((url, body) => {
         if (url !== requestUrl) {
           return;
         }
-        messageIndex = messages.findIndex(function (message) {
+        const messageIndex = messages.findIndex((message) => {
           try {
             assert.deepEqual(body, message);
             return true;
@@ -442,392 +471,367 @@ describe('SlackMessageAdapter', function () {
         }
       });
 
-      return Promise.all(messagePromiseEntries.map(function (entry) {
+      return Promise.all(messagePromiseEntries.map((entry) => {
         return entry.promise;
       }));
     }
 
-    describe('when dispatching a message action request', function () {
-      beforeEach(function () {
+    describe('when dispatching a message action request', () => {
+      let requestPayload;
+      let replacement;
+
+      beforeEach(() => {
         // this represents a minimum action from a button
-        this.requestPayload = {
+        requestPayload = {
           callback_id: 'id',
           actions: [{
-            type: 'button'
+            type: 'button',
           }],
-          response_url: 'https://example.com'
+          response_url: 'https://example.com',
         };
-        this.replacement = { text: 'example replacement message' };
+        replacement = { text: 'example replacement message' };
       });
-      it('should handle the callback returning a message with a synchronous response', function () {
-        let dispatchResponse;
-        const requestPayload = this.requestPayload;
-        const replacement = this.replacement;
-        this.adapter.action(requestPayload.callback_id, function (payload, respond) {
+
+      it('should handle the callback returning a message with a synchronous response', () => {
+        adapter.action(requestPayload.callback_id, (payload, respond) => {
           assert.deepEqual(payload, requestPayload);
           assert.isFunction(respond);
           return replacement;
         });
-        dispatchResponse = this.adapter.dispatch(requestPayload);
+        const dispatchResponse = adapter.dispatch(requestPayload);
         return assertResponseStatusAndMessage(dispatchResponse, 200, replacement);
       });
+
       it('should handle the callback returning a promise of a message before the timeout with a ' +
          'synchronous response', function () {
-        let dispatchResponse;
-        const requestPayload = this.requestPayload;
-        const replacement = this.replacement;
-        const timeout = this.adapter.syncResponseTimeout;
+        const timeout = adapter.syncResponseTimeout;
         this.timeout(timeout);
-        this.adapter.action(requestPayload.callback_id, function (payload, respond) {
+        adapter.action(requestPayload.callback_id, (payload, respond) => {
           assert.deepEqual(payload, requestPayload);
           assert.isFunction(respond);
           return delayed(timeout * 0.1, replacement);
         });
-        dispatchResponse = this.adapter.dispatch(requestPayload);
+        const dispatchResponse = adapter.dispatch(requestPayload);
         return assertResponseStatusAndMessage(dispatchResponse, 200, replacement);
       });
+
       it('should handle the callback returning a promise of a message after the timeout with an ' +
          'asynchronous response', function () {
-        let dispatchResponse;
-        const requestPayload = this.requestPayload;
-        const replacement = this.replacement;
         const expectedAsyncRequest = assertPostRequestMadeWithMessages(
-          this.adapter,
+          adapter,
           requestPayload.response_url,
-          replacement
+          replacement,
         );
-        const timeout = this.adapter.syncResponseTimeout;
+        const timeout = adapter.syncResponseTimeout;
         this.timeout(timeout * 2);
-        this.adapter.action(requestPayload.callback_id, function (payload, respond) {
+        adapter.action(requestPayload.callback_id, (payload, respond) => {
           assert.deepEqual(payload, requestPayload);
           assert.isFunction(respond);
           return delayed(timeout * 1.1, replacement);
         });
-        dispatchResponse = this.adapter.dispatch(requestPayload);
+        const dispatchResponse = adapter.dispatch(requestPayload);
         return Promise.all([
           assertResponseStatusAndMessage(dispatchResponse, 200),
-          expectedAsyncRequest
+          expectedAsyncRequest,
         ]);
       });
+
       it('should handle the callback returning a promise that fails after the timeout with a ' +
          'sychronous response', function () {
-        let dispatchResponse;
-        const requestPayload = this.requestPayload;
-        const timeout = this.adapter.syncResponseTimeout;
+        const timeout = adapter.syncResponseTimeout;
         this.timeout(timeout * 2);
-        this.adapter.action(requestPayload.callback_id, function () {
+        adapter.action(requestPayload.callback_id, () => {
           return delayed(timeout * 1.1, undefined, 'test error');
         });
-        dispatchResponse = this.adapter.dispatch(requestPayload);
+        const dispatchResponse = adapter.dispatch(requestPayload);
         return assertResponseStatusAndMessage(dispatchResponse, 200);
       });
+
       it('should handle the callback returning a promise that fails before the timeout with a ' +
          'sychronous response', function () {
-        let dispatchResponse;
-        const requestPayload = this.requestPayload;
-        const timeout = this.adapter.syncResponseTimeout;
+        const timeout = adapter.syncResponseTimeout;
         this.timeout(timeout);
-        this.adapter.action(requestPayload.callback_id, function () {
+        adapter.action(requestPayload.callback_id, () => {
           return delayed(timeout * 0.1, undefined, 'test error');
         });
-        dispatchResponse = this.adapter.dispatch(requestPayload);
+        const dispatchResponse = adapter.dispatch(requestPayload);
         return assertResponseStatusAndMessage(dispatchResponse, 500);
       });
+
       it('should handle the callback returning nothing and using respond to send a message', function () {
-        let dispatchResponse;
-        const requestPayload = this.requestPayload;
-        const replacement = this.replacement;
         const expectedAsyncRequest = assertPostRequestMadeWithMessages(
-          this.adapter,
+          adapter,
           requestPayload.response_url,
-          replacement
+          replacement,
         );
-        const timeout = this.adapter.syncResponseTimeout;
+        const timeout = adapter.syncResponseTimeout;
         this.timeout(timeout * 2);
-        this.adapter.action(requestPayload.callback_id, function (payload, respond) {
+        adapter.action(requestPayload.callback_id, (payload, respond) => {
+          // eslint-disable-next-line @typescript-eslint/no-floating-promises
           delayed(timeout * 1.1)
-            .then(function () {
+            .then(() => {
               respond(replacement);
             });
         });
-        dispatchResponse = this.adapter.dispatch(requestPayload);
+        const dispatchResponse = adapter.dispatch(requestPayload);
         return Promise.all([
           assertResponseStatusAndMessage(dispatchResponse, 200),
-          expectedAsyncRequest
+          expectedAsyncRequest,
         ]);
       });
+
       it('should handle the callback returning a promise of a message after the timeout with an ' +
          'asynchronous response and using respond to send another asynchronous response', function () {
-        let dispatchResponse;
-        const requestPayload = this.requestPayload;
-        const firstReplacement = this.replacement;
-        const secondReplacement = Object.assign({}, firstReplacement, { text: '2nd replacement' });
+        const secondReplacement = { ...replacement, text: '2nd replacement' };
         const expectedAsyncRequest = assertPostRequestMadeWithMessages(
-          this.adapter,
+          adapter,
           requestPayload.response_url,
-          firstReplacement,
-          secondReplacement
+          replacement,
+          secondReplacement,
         );
-        const timeout = this.adapter.syncResponseTimeout;
+        const timeout = adapter.syncResponseTimeout;
         this.timeout(timeout * 2);
-        this.adapter.action(requestPayload.callback_id, function (payload, respond) {
+        adapter.action(requestPayload.callback_id, (payload, respond) => {
+          // eslint-disable-next-line @typescript-eslint/no-floating-promises
           delayed(timeout * 1.2)
-            .then(function () {
+            .then(() => {
               respond(secondReplacement);
             });
-          return delayed(timeout * 1.1, firstReplacement);
+          return delayed(timeout * 1.1, replacement);
         });
-        dispatchResponse = this.adapter.dispatch(requestPayload);
+        const dispatchResponse = adapter.dispatch(requestPayload);
         return Promise.all([
           assertResponseStatusAndMessage(dispatchResponse, 200),
-          expectedAsyncRequest
+          expectedAsyncRequest,
         ]);
       });
+
       it('should handle the callback returning nothing with a synchronous response and using ' +
          'respond to send multiple asynchronous responses', function () {
-        let dispatchResponse;
-        const requestPayload = this.requestPayload;
-        const firstReplacement = this.replacement;
-        const secondReplacement = Object.assign({}, firstReplacement, { text: '2nd replacement' });
+        const secondReplacement = { ...replacement, text: '2nd replacement' };
         const expectedAsyncRequest = assertPostRequestMadeWithMessages(
-          this.adapter,
+          adapter,
           requestPayload.response_url,
-          firstReplacement,
-          secondReplacement
+          replacement,
+          secondReplacement,
         );
-        const timeout = this.adapter.syncResponseTimeout;
+        const timeout = adapter.syncResponseTimeout;
         this.timeout(timeout * 2);
-        this.adapter.action(requestPayload.callback_id, function (payload, respond) {
+        adapter.action(requestPayload.callback_id, (payload, respond) => {
+          // eslint-disable-next-line @typescript-eslint/no-floating-promises
           delayed(timeout * 1.1)
-            .then(function () {
-              respond(firstReplacement);
+            .then(() => {
+              respond(replacement);
               return delayed(timeout * 0.1);
             })
-            .then(function () {
+            .then(() => {
               respond(secondReplacement);
             });
         });
-        dispatchResponse = this.adapter.dispatch(requestPayload);
+        const dispatchResponse = adapter.dispatch(requestPayload);
         return Promise.all([
           assertResponseStatusAndMessage(dispatchResponse, 200),
-          expectedAsyncRequest
+          expectedAsyncRequest,
         ]);
       });
-      describe('when lateResponseFallbackEnabled is configured as false', function () {
-        beforeEach(function () {
-          this.adapter = new SlackMessageAdapter(workingSigningSecret, {
+
+      describe('when lateResponseFallbackEnabled is configured as false', () => {
+        beforeEach(() => {
+          adapter = new SlackMessageAdapter(workingSigningSecret, {
             syncResponseTimeout: 30,
-            lateResponseFallbackEnabled: false
+            lateResponseFallbackEnabled: false,
           });
         });
+
         it('should handle the callback returning a promise of a message after the timeout with a ' +
             'synchronous response', function () {
-          let dispatchResponse;
-          const requestPayload = this.requestPayload;
-          const replacement = this.replacement;
-          const timeout = this.adapter.syncResponseTimeout;
+          const timeout = adapter.syncResponseTimeout;
           this.timeout(timeout * 2);
-          this.adapter.action(requestPayload.callback_id, function (payload, respond) {
+          adapter.action(requestPayload.callback_id, (payload, respond) => {
             assert.deepEqual(payload, requestPayload);
             assert.isFunction(respond);
             return delayed(timeout * 1.1, replacement);
           });
-          dispatchResponse = this.adapter.dispatch(requestPayload);
+          const dispatchResponse = adapter.dispatch(requestPayload);
           return assertResponseStatusAndMessage(dispatchResponse, 200, replacement);
         });
+
         it('should handle the callback returning a promise that fails after the timeout with a ' +
            'sychronous response', function () {
-          let dispatchResponse;
-          const requestPayload = this.requestPayload;
-          const timeout = this.adapter.syncResponseTimeout;
+          const timeout = adapter.syncResponseTimeout;
           this.timeout(timeout * 2);
-          this.adapter.action(requestPayload.callback_id, function () {
+          adapter.action(requestPayload.callback_id, () => {
             return delayed(timeout * 1.1, undefined, 'test error');
           });
-          dispatchResponse = this.adapter.dispatch(requestPayload);
+          const dispatchResponse = adapter.dispatch(requestPayload);
           return assertResponseStatusAndMessage(dispatchResponse, 500);
         });
       });
     });
 
-    describe('when dispatching a dialog submission request', function () {
-      beforeEach(function () {
-        this.requestPayload = {
+    describe('when dispatching a dialog submission request', () => {
+      let requestPayload;
+      let submissionResponse;
+      let followUp;
+
+      beforeEach(() => {
+        requestPayload = {
           type: 'dialog_submission',
           callback_id: 'id',
           submission: {
-            email_address: 'ankur@h4x0r.com'
+            email_address: 'ankur@h4x0r.com',
           },
-          response_url: 'https://example.com'
+          response_url: 'https://example.com',
         };
-        this.submissionResponse = {
+        submissionResponse = {
           errors: [
             {
               name: 'email_address',
-              error: 'Sorry, this email domain is not authorized!'
-            }
-          ]
+              error: 'Sorry, this email domain is not authorized!',
+            },
+          ],
         };
-        this.followUp = { text: 'thanks for submitting your email address' };
+        followUp = { text: 'thanks for submitting your email address' };
       });
-      it('should handle the callback returning a message with a synchronous response', function () {
-        let dispatchResponse;
-        const requestPayload = this.requestPayload;
-        const submissionResponse = this.submissionResponse;
-        this.adapter.action(requestPayload.callback_id, function (payload, respond) {
+
+      it('should handle the callback returning a message with a synchronous response', () => {
+        adapter.action(requestPayload.callback_id, (payload, respond) => {
           assert.deepEqual(payload, requestPayload);
           assert.isFunction(respond);
           return submissionResponse;
         });
-        dispatchResponse = this.adapter.dispatch(requestPayload);
+        const dispatchResponse = adapter.dispatch(requestPayload);
         return assertResponseStatusAndMessage(dispatchResponse, 200, submissionResponse);
       });
 
       it('should handle the callback returning a promise of a message before the timeout with a ' +
          'synchronous response', function () {
-        let dispatchResponse;
-        const requestPayload = this.requestPayload;
-        const submissionResponse = this.submissionResponse;
-        const timeout = this.adapter.syncResponseTimeout;
+        const timeout = adapter.syncResponseTimeout;
         this.timeout(timeout);
-        this.adapter.action(requestPayload.callback_id, function (payload, respond) {
+        adapter.action(requestPayload.callback_id, (payload, respond) => {
           assert.deepEqual(payload, requestPayload);
           assert.isFunction(respond);
           return delayed(timeout * 0.1, submissionResponse);
         });
-        dispatchResponse = this.adapter.dispatch(requestPayload);
+        const dispatchResponse = adapter.dispatch(requestPayload);
         return assertResponseStatusAndMessage(dispatchResponse, 200, submissionResponse);
       });
 
       it('should handle the callback returning a promise of a message after the timeout with a ' +
          'synchronous response', function () {
-        let dispatchResponse;
-        const requestPayload = this.requestPayload;
-        const submissionResponse = this.submissionResponse;
-        const timeout = this.adapter.syncResponseTimeout;
+        const timeout = adapter.syncResponseTimeout;
         this.timeout(timeout * 2);
-        this.adapter.action(requestPayload.callback_id, function (payload, respond) {
+        adapter.action(requestPayload.callback_id, (payload, respond) => {
           assert.deepEqual(payload, requestPayload);
           assert.isFunction(respond);
           return delayed(timeout * 1.1, submissionResponse);
         });
-        dispatchResponse = this.adapter.dispatch(requestPayload);
+        const dispatchResponse = adapter.dispatch(requestPayload);
         return assertResponseStatusAndMessage(dispatchResponse, 200, submissionResponse);
       });
 
-      it('should handle the callback returning nothing with a synchronous response', function () {
-        let dispatchResponse;
-        const requestPayload = this.requestPayload;
-        this.adapter.action(requestPayload.callback_id, function (payload, respond) {
+      it('should handle the callback returning nothing with a synchronous response', () => {
+        adapter.action(requestPayload.callback_id, (payload, respond) => {
           assert.deepEqual(payload, requestPayload);
           assert.isFunction(respond);
         });
-        dispatchResponse = this.adapter.dispatch(requestPayload);
+        const dispatchResponse = adapter.dispatch(requestPayload);
         return assertResponseStatusAndMessage(dispatchResponse, 200);
       });
 
       it('should handle the callback using respond to send a follow up message', function () {
-        let dispatchResponse;
-        const requestPayload = this.requestPayload;
-        const followUp = this.followUp;
         const expectedAsyncRequest = assertPostRequestMadeWithMessages(
-          this.adapter,
+          adapter,
           requestPayload.response_url,
-          followUp
+          followUp,
         );
-        const timeout = this.adapter.syncResponseTimeout;
+        const timeout = adapter.syncResponseTimeout;
         this.timeout(timeout * 2);
-        this.adapter.action(requestPayload.callback_id, function (payload, respond) {
+        adapter.action(requestPayload.callback_id, (payload, respond) => {
+          // eslint-disable-next-line @typescript-eslint/no-floating-promises
           delayed(timeout * 1.1)
-            .then(function () {
+            .then(() => {
               respond(followUp);
             });
         });
-        dispatchResponse = this.adapter.dispatch(requestPayload);
+        const dispatchResponse = adapter.dispatch(requestPayload);
         return Promise.all([
           assertResponseStatusAndMessage(dispatchResponse, 200),
-          expectedAsyncRequest
+          expectedAsyncRequest,
         ]);
       });
     });
 
-    describe('when dispatching a menu options request', function () {
-      beforeEach(function () {
+    describe('when dispatching a menu options request', () => {
+      let requestPayload;
+      let optionsResponse;
+
+      beforeEach(() => {
         // this represents a minimum menu options request from an interactive message
-        this.requestPayload = {
+        requestPayload = {
           name: 'bug_name',
           value: 'TRAC-12',
           type: 'interactive_message',
-          callback_id: 'id'
+          callback_id: 'id',
         };
-        this.optionsResponse = {
+        optionsResponse = {
           options: [
             {
               text: 'Buggy McBugface',
-              value: 'TRAC-12345'
-            }
-          ]
+              value: 'TRAC-12345',
+            },
+          ],
         };
       });
+
       // NOTE: if the response options or options_groups contain the property "label", we can
       // change them to "text"
-      it('should handle the callback returning options with a synchronous response', function () {
-        let dispatchResponse;
-        const requestPayload = this.requestPayload;
-        const optionsResponse = this.optionsResponse;
-        this.adapter.options(requestPayload.callback_id, function (payload, secondArg) {
+      it('should handle the callback returning options with a synchronous response', () => {
+        adapter.options(requestPayload.callback_id, (payload, secondArg) => {
           assert.deepEqual(payload, requestPayload);
           assert.isUndefined(secondArg);
           return optionsResponse;
         });
-        dispatchResponse = this.adapter.dispatch(requestPayload);
+        const dispatchResponse = adapter.dispatch(requestPayload);
         return assertResponseStatusAndMessage(dispatchResponse, 200, optionsResponse);
       });
 
       it('should handle the callback returning a promise of options before the timeout with a ' +
          'synchronous response', function () {
-        let dispatchResponse;
-        const requestPayload = this.requestPayload;
-        const optionsResponse = this.optionsResponse;
-        const timeout = this.adapter.syncResponseTimeout;
+        const timeout = adapter.syncResponseTimeout;
         this.timeout(timeout);
-        this.adapter.options(requestPayload.callback_id, function (payload, secondArg) {
+        adapter.options(requestPayload.callback_id, (payload, secondArg) => {
           assert.deepEqual(payload, requestPayload);
           assert.isUndefined(secondArg);
           return delayed(timeout * 0.1, optionsResponse);
         });
-        dispatchResponse = this.adapter.dispatch(requestPayload);
+        const dispatchResponse = adapter.dispatch(requestPayload);
         return assertResponseStatusAndMessage(dispatchResponse, 200, optionsResponse);
       });
 
       it('should handle the callback returning a promise of options after the timeout with a ' +
          'synchronous response', function () {
-        let dispatchResponse;
-        const requestPayload = this.requestPayload;
-        const optionsResponse = this.optionsResponse;
-        const timeout = this.adapter.syncResponseTimeout;
+        const timeout = adapter.syncResponseTimeout;
         this.timeout(timeout * 2);
-        this.adapter.options(requestPayload.callback_id, function (payload, secondArg) {
+        adapter.options(requestPayload.callback_id, (payload, secondArg) => {
           assert.deepEqual(payload, requestPayload);
           assert.isUndefined(secondArg);
           return delayed(timeout * 1.1, optionsResponse);
         });
-        dispatchResponse = this.adapter.dispatch(requestPayload);
+        const dispatchResponse = adapter.dispatch(requestPayload);
         return assertResponseStatusAndMessage(dispatchResponse, 200, optionsResponse);
       });
 
-      it('should handle the callback returning nothing with a synchronous response', function () {
-        let dispatchResponse;
-        const requestPayload = this.requestPayload;
-        this.adapter.options(requestPayload.callback_id, function (payload, secondArg) {
+      it('should handle the callback returning nothing with a synchronous response', () => {
+        adapter.options(requestPayload.callback_id, (payload, secondArg) => {
           assert.deepEqual(payload, requestPayload);
           assert.isUndefined(secondArg);
         });
-        dispatchResponse = this.adapter.dispatch(requestPayload);
+        const dispatchResponse = adapter.dispatch(requestPayload);
         return assertResponseStatusAndMessage(dispatchResponse, 200);
       });
-      // describe('when the menu options request is coming from a dialog', function () {
-      //   beforeEach(function () {
+      // describe('when the menu options request is coming from a dialog', () => {
+      //   beforeEach(() => {
       //     this.requestPayload.type = 'dialog';
       //   });
       //   // NOTE: if the response options or options_groups contain the property "text", we can
@@ -837,89 +841,101 @@ describe('SlackMessageAdapter', function () {
 
     // the following tests pertain to the behavior of #matchCallback(), but since that is an
     // implementation detail, its tested as part of the behavior of #dispatch()
-    describe('callback matching', function () {
-      beforeEach(function () {
-        this.buttonPayload = {
+    describe('callback matching', () => {
+      let buttonPayload;
+      let buttonPayloadBlocks;
+      let buttonAppUnfurlPayload;
+      let dialogSubmissionPayload;
+      let menuSelectionPayload;
+      let optionsFromInteractiveMessagePayload;
+      let optionsFromBlockMessagePayload;
+      let optionsFromDialogPayload;
+      let callback;
+
+      beforeEach(() => {
+        buttonPayload = {
           callback_id: 'id',
           actions: [{
-            type: 'button'
+            type: 'button',
           }],
-          response_url: 'https://example.com'
+          response_url: 'https://example.com',
         };
-        this.buttonPayloadBlocks = {
+        buttonPayloadBlocks = {
           actions: [{
             type: 'button',
             block_id: 'b_id',
-            action_id: 'a_id'
+            action_id: 'a_id',
           }],
-          response_url: 'https://example.com'
+          response_url: 'https://example.com',
         };
-        this.buttonAppUnfurlPayload = Object.assign({}, this.buttonPayload, {
-          is_app_unfurl: true
-        });
+        buttonAppUnfurlPayload = {
+          ...buttonPayload,
+          is_app_unfurl: true,
+        };
         // NOTE: this payload isn't used in a test but it remains a good reference
-        this.dialogSubmissionPayload = {
+        dialogSubmissionPayload = {
           type: 'dialog_submission',
           callback_id: 'id',
           submission: {
-            name: 'Value'
+            name: 'Value',
           },
-          response_url: 'https://example.com'
+          response_url: 'https://example.com',
         };
         // NOTE: this payload isn't used in a test but it remains a good reference
-        this.menuSelectionPayload = {
+        menuSelectionPayload = {
           callback_id: 'id',
           actions: [{
             name: 'pick_a_thing',
             selected_options: [{
-              value: 'Option A'
-            }]
+              value: 'Option A',
+            }],
           }],
-          response_url: 'https://example.com'
+          response_url: 'https://example.com',
         };
-        this.optionsFromInteractiveMessagePayload = {
+        optionsFromInteractiveMessagePayload = {
           name: 'pick_a_thing',
           value: 'opti',
           callback_id: 'id',
-          type: 'interactive_message'
+          type: 'interactive_message',
         };
-        this.optionsFromBlockMessagePayload = {
+        optionsFromBlockMessagePayload = {
           value: 'opti',
           block_id: 'b_id',
           action_id: 'a_id',
-          type: 'block_suggestion'
+          type: 'block_suggestion',
         };
-        this.optionsFromDialogPayload = {
+        optionsFromDialogPayload = {
           name: 'pick_a_thing',
           value: 'opti',
           callback_id: 'id',
-          type: 'dialog_suggestion'
+          type: 'dialog_suggestion',
         };
-        this.callback = sinon.spy();
+        callback = sinon.spy();
       });
-      it('should return undefined when there are no callbacks registered', function () {
-        const response = this.adapter.dispatch({});
+
+      it('should return undefined when there are no callbacks registered', () => {
+        const response = adapter.dispatch({});
         assert.isUndefined(response);
       });
 
-      describe('callback ID based matching', function () {
-        beforeEach(function () {
-          this.payload = this.buttonPayload;
+      describe('callback ID based matching', () => {
+        let payload;
+
+        beforeEach(() => {
+          payload = buttonPayload;
         });
 
-        it('should return undefined with a string mismatch', function () {
-          let response;
-          this.adapter.action('b', this.callback);
-          response = this.adapter.dispatch(this.payload);
-          assert(this.callback.notCalled);
+        it('should return undefined with a string mismatch', () => {
+          adapter.action('b', callback);
+          const response = adapter.dispatch(payload);
+          assert(callback.notCalled);
           assert.isUndefined(response);
         });
 
-        it('should return undefined with a RegExp mismatch', function () {
-          let response;
-          this.adapter.action(/b/, this.callback);
-          response = this.adapter.dispatch(this.payload);
-          assert(this.callback.notCalled);
+        it('should return undefined with a RegExp mismatch', () => {
+          adapter.action(/b/, callback);
+          const response = adapter.dispatch(payload);
+          assert(callback.notCalled);
           assert.isUndefined(response);
         });
 
@@ -927,244 +943,246 @@ describe('SlackMessageAdapter', function () {
         // as an options handler instead
       });
 
-      describe('block ID based matching', function () {
-        beforeEach(function () {
-          this.payload = this.buttonPayloadBlocks;
+      describe('block ID based matching', () => {
+        let payload;
+
+        beforeEach(() => {
+          payload = buttonPayloadBlocks;
         });
 
-        it('should return undefined with a string mismatch', function () {
-          let response;
-          this.adapter.action({ blockId: 'a' }, this.callback);
-          response = this.adapter.dispatch(this.payload);
-          assert(this.callback.notCalled);
+        it('should return undefined with a string mismatch', () => {
+          adapter.action({ blockId: 'a' }, callback);
+          const response = adapter.dispatch(payload);
+          assert(callback.notCalled);
           assert.isUndefined(response);
         });
 
-        it('should return undefined with a RegExp mismatch', function () {
-          let response;
-          this.adapter.action({ blockId: /a/ }, this.callback);
-          response = this.adapter.dispatch(this.payload);
-          assert(this.callback.notCalled);
+        it('should return undefined with a RegExp mismatch', () => {
+          adapter.action({ blockId: /a/ }, callback);
+          const response = adapter.dispatch(payload);
+          assert(callback.notCalled);
           assert.isUndefined(response);
         });
 
-        it('should match with matching blockId', function () {
-          this.adapter.action({ blockId: 'b_id' }, this.callback);
-          this.adapter.dispatch(this.payload);
-          assert(this.callback.called);
+        it('should match with matching blockId', () => {
+          adapter.action({ blockId: 'b_id' }, callback);
+          adapter.dispatch(payload);
+          assert(callback.called);
         });
 
-        it('should match with matching RegExp blockId', function () {
-          this.adapter.action({ blockId: /b/ }, this.callback);
-          this.adapter.dispatch(this.payload);
-          assert(this.callback.called);
+        it('should match with matching RegExp blockId', () => {
+          adapter.action({ blockId: /b/ }, callback);
+          adapter.dispatch(payload);
+          assert(callback.called);
         });
 
-        it('should return undefined with a string mismatch with options', function () {
-          let response;
-          this.adapter.options({ blockId: 'a' }, this.callback);
-          response = this.adapter.dispatch(this.optionsFromBlockMessagePayload);
-          assert(this.callback.notCalled);
+        it('should return undefined with a string mismatch with options', () => {
+          adapter.options({ blockId: 'a' }, callback);
+          const response = adapter.dispatch(optionsFromBlockMessagePayload);
+          assert(callback.notCalled);
           assert.isUndefined(response);
         });
 
-        it('should return undefined with a RegExp mismatch with options', function () {
-          let response;
-          this.adapter.options({ blockId: /a/ }, this.callback);
-          response = this.adapter.dispatch(this.optionsFromBlockMessagePayload);
-          assert(this.callback.notCalled);
+        it('should return undefined with a RegExp mismatch with options', () => {
+          adapter.options({ blockId: /a/ }, callback);
+          const response = adapter.dispatch(optionsFromBlockMessagePayload);
+          assert(callback.notCalled);
           assert.isUndefined(response);
         });
 
-        it('should match with matching blockId with options', function () {
-          this.adapter.options({ blockId: 'b_id' }, this.callback);
-          this.adapter.dispatch(this.optionsFromBlockMessagePayload);
-          assert(this.callback.called);
+        it('should match with matching blockId with options', () => {
+          adapter.options({ blockId: 'b_id' }, callback);
+          adapter.dispatch(optionsFromBlockMessagePayload);
+          assert(callback.called);
         });
 
-        it('should match with matching RegExp blockId with options', function () {
-          this.adapter.options({ blockId: /b/ }, this.callback);
-          this.adapter.dispatch(this.optionsFromBlockMessagePayload);
-          assert(this.callback.called);
+        it('should match with matching RegExp blockId with options', () => {
+          adapter.options({ blockId: /b/ }, callback);
+          adapter.dispatch(optionsFromBlockMessagePayload);
+          assert(callback.called);
         });
       });
 
-      describe('action ID based matching', function () {
-        beforeEach(function () {
-          this.payload = this.buttonPayloadBlocks;
+      describe('action ID based matching', () => {
+        let payload;
+
+        beforeEach(() => {
+          payload = buttonPayloadBlocks;
         });
 
-        it('should return undefined with a string mismatch', function () {
-          let response;
-          this.adapter.action({ actionId: 'b' }, this.callback);
-          response = this.adapter.dispatch(this.payload);
-          assert(this.callback.notCalled);
+        it('should return undefined with a string mismatch', () => {
+          adapter.action({ actionId: 'b' }, callback);
+          const response = adapter.dispatch(payload);
+          assert(callback.notCalled);
           assert.isUndefined(response);
         });
 
-        it('should return undefined with a RegExp mismatch', function () {
-          let response;
-          this.adapter.action({ actionId: /b/ }, this.callback);
-          response = this.adapter.dispatch(this.payload);
-          assert(this.callback.notCalled);
+        it('should return undefined with a RegExp mismatch', () => {
+          adapter.action({ actionId: /b/ }, callback);
+          const response = adapter.dispatch(payload);
+          assert(callback.notCalled);
           assert.isUndefined(response);
         });
 
-        it('should match with matching actionId', function () {
-          this.adapter.action({ actionId: 'a_id' }, this.callback);
-          this.adapter.dispatch(this.payload);
-          assert(this.callback.called);
+        it('should match with matching actionId', () => {
+          adapter.action({ actionId: 'a_id' }, callback);
+          adapter.dispatch(payload);
+          assert(callback.called);
         });
 
-        it('should match with matching RegExp actionId', function () {
-          this.adapter.action({ actionId: /a/ }, this.callback);
-          this.adapter.dispatch(this.payload);
-          assert(this.callback.called);
+        it('should match with matching RegExp actionId', () => {
+          adapter.action({ actionId: /a/ }, callback);
+          adapter.dispatch(payload);
+          assert(callback.called);
         });
 
-        it('should return undefined with a string mismatch with options', function () {
-          let response;
-          this.adapter.options({ actionId: 'b' }, this.callback);
-          response = this.adapter.dispatch(this.optionsFromBlockMessagePayload);
-          assert(this.callback.notCalled);
+        it('should return undefined with a string mismatch with options', () => {
+          adapter.options({ actionId: 'b' }, callback);
+          const response = adapter.dispatch(optionsFromBlockMessagePayload);
+          assert(callback.notCalled);
           assert.isUndefined(response);
         });
 
-        it('should return undefined with a RegExp mismatch with options', function () {
-          let response;
-          this.adapter.options({ actionId: /b/ }, this.callback);
-          response = this.adapter.dispatch(this.optionsFromBlockMessagePayload);
-          assert(this.callback.notCalled);
+        it('should return undefined with a RegExp mismatch with options', () => {
+          adapter.options({ actionId: /b/ }, callback);
+          const response = adapter.dispatch(optionsFromBlockMessagePayload);
+          assert(callback.notCalled);
           assert.isUndefined(response);
         });
 
-        it('should match with matching string actionId with options', function () {
-          this.adapter.options({ actionId: 'a_id' }, this.callback);
-          this.adapter.dispatch(this.optionsFromBlockMessagePayload);
-          assert(this.callback.called);
+        it('should match with matching string actionId with options', () => {
+          adapter.options({ actionId: 'a_id' }, callback);
+          adapter.dispatch(optionsFromBlockMessagePayload);
+          assert(callback.called);
         });
 
-        it('should match with matching RegExp actionId with options', function () {
-          this.adapter.options({ actionId: /a/ }, this.callback);
-          this.adapter.dispatch(this.optionsFromBlockMessagePayload);
-          assert(this.callback.called);
+        it('should match with matching RegExp actionId with options', () => {
+          adapter.options({ actionId: /a/ }, callback);
+          adapter.dispatch(optionsFromBlockMessagePayload);
+          assert(callback.called);
         });
       });
 
-      describe('type based matching', function () {
-        beforeEach(function () {
-          this.payload = this.buttonPayload;
+      describe('type based matching', () => {
+        let payload;
+
+        beforeEach(() => {
+          payload = buttonPayload;
         });
 
-        it('should return undefined when type is present in constraints and it mismatches', function () {
-          let response;
-          this.adapter.action({ type: 'select' }, this.callback);
-          response = this.adapter.dispatch(this.payload);
-          assert(this.callback.notCalled);
+        it('should return undefined when type is present in constraints and it mismatches', () => {
+          adapter.action({ type: 'select' }, callback);
+          const response = adapter.dispatch(payload);
+          assert(callback.notCalled);
           assert.isUndefined(response);
         });
 
-        it('should match when type not present in constraints', function () {
-          this.adapter.action({}, this.callback);
-          this.adapter.dispatch(this.payload);
-          assert(this.callback.called);
+        it('should match when type not present in constraints', () => {
+          adapter.action({}, callback);
+          adapter.dispatch(payload);
+          assert(callback.called);
         });
 
-        it('should not throw when type is not found in payload', function () {
-          this.adapter.action({}, this.callback);
-          this.adapter.dispatch({ actions: [{}] });
+        it('should not throw when type is not found in payload', () => {
+          adapter.action({}, callback);
+          adapter.dispatch({ actions: [{}] });
         });
 
         // TODO: successful match on type (utilize the unused payloads above)
       });
 
-      describe('unfurl based matching', function () {
-        beforeEach(function () {
-          this.payload = this.buttonAppUnfurlPayload;
+      describe('unfurl based matching', () => {
+        let payload;
+
+        beforeEach(() => {
+          payload = buttonAppUnfurlPayload;
         });
 
-        it('should return undefined when unfurl is present in constraints and it mismatches', function () {
-          let response;
-          this.adapter.action({ unfurl: false }, this.callback);
-          response = this.adapter.dispatch(this.payload);
-          assert(this.callback.notCalled);
+        it('should return undefined when unfurl is present in constraints and it mismatches', () => {
+          adapter.action({ unfurl: false }, callback);
+          const response = adapter.dispatch(payload);
+          assert(callback.notCalled);
           assert.isUndefined(response);
         });
 
-        it('should match when unfurl not present in constraints', function () {
-          this.adapter.action({}, this.callback);
-          this.adapter.dispatch(this.payload);
-          assert(this.callback.called);
+        it('should match when unfurl not present in constraints', () => {
+          adapter.action({}, callback);
+          adapter.dispatch(payload);
+          assert(callback.called);
         });
 
         // TODO: successful match on unfurl
       });
 
-      describe('within based matching (options request only)', function () {
-        it('should return undefined when within is present in constraints and it mismatches', function () {
-          let response;
-          this.adapter.options({ within: 'dialog' }, this.callback);
-          response = this.adapter.dispatch(this.optionsFromInteractiveMessagePayload);
-          assert(this.callback.notCalled);
+      describe('within based matching (options request only)', () => {
+        it('should return undefined when within is present in constraints and it mismatches', () => {
+          adapter.options({ within: 'dialog' }, callback);
+          let response = adapter.dispatch(optionsFromInteractiveMessagePayload);
+          assert(callback.notCalled);
           assert.isUndefined(response);
 
-          unregisterAllHandlers(this.adapter);
+          unregisterAllHandlers(adapter);
 
-          this.adapter.options({ within: 'interactive_message' }, this.callback);
-          response = this.adapter.dispatch(this.optionsFromDialogPayload);
-          assert(this.callback.notCalled);
+          adapter.options({ within: 'interactive_message' }, callback);
+          response = adapter.dispatch(optionsFromDialogPayload);
+          assert(callback.notCalled);
           assert.isUndefined(response);
 
-          unregisterAllHandlers(this.adapter);
+          unregisterAllHandlers(adapter);
 
-          this.adapter.options({ within: 'block_actions' }, this.callback);
-          response = this.adapter.dispatch(this.optionsFromInteractiveMessagePayload);
-          assert(this.callback.notCalled);
+          adapter.options({ within: 'block_actions' }, callback);
+          response = adapter.dispatch(optionsFromInteractiveMessagePayload);
+          assert(callback.notCalled);
           assert.isUndefined(response);
         });
-        it('should match when within is not present in constraints', function () {
-          this.adapter.options({}, this.callback);
-          this.adapter.dispatch(this.optionsFromInteractiveMessagePayload);
-          assert(this.callback.called);
+
+        it('should match when within is not present in constraints', () => {
+          adapter.options({}, callback);
+          adapter.dispatch(optionsFromInteractiveMessagePayload);
+          assert(callback.called);
         });
-        it('should match using within constraint on options requests from interactive messages', function () {
-          this.adapter.options({ within: 'interactive_message' }, this.callback);
-          this.adapter.dispatch(this.optionsFromInteractiveMessagePayload);
-          assert(this.callback.called);
+
+        it('should match using within constraint on options requests from interactive messages', () => {
+          adapter.options({ within: 'interactive_message' }, callback);
+          adapter.dispatch(optionsFromInteractiveMessagePayload);
+          assert(callback.called);
         });
-        it('should match using within constraint on options requests from Block Kit messages', function () {
-          this.adapter.options({ within: 'block_actions' }, this.callback);
-          this.adapter.dispatch(this.optionsFromBlockMessagePayload);
-          assert(this.callback.called);
+
+        it('should match using within constraint on options requests from Block Kit messages', () => {
+          adapter.options({ within: 'block_actions' }, callback);
+          adapter.dispatch(optionsFromBlockMessagePayload);
+          assert(callback.called);
         });
-        it('should match using within constraint on options requests from dialog', function () {
-          this.adapter.options({ within: 'dialog' }, this.callback);
-          this.adapter.dispatch(this.optionsFromDialogPayload);
-          assert(this.callback.called);
+
+        it('should match using within constraint on options requests from dialog', () => {
+          adapter.options({ within: 'dialog' }, callback);
+          adapter.dispatch(optionsFromDialogPayload);
+          assert(callback.called);
         });
       });
 
-      describe('action and options request handlers', function () {
-        it('should not match a options handler for an action payload', function () {
-          this.adapter.options(this.buttonPayload.callback_id, this.callback);
-          this.adapter.dispatch(this.buttonPayload);
-          assert(this.callback.notCalled);
+      describe('action and options request handlers', () => {
+        it('should not match a options handler for an action payload', () => {
+          adapter.options(buttonPayload.callback_id, callback);
+          adapter.dispatch(buttonPayload);
+          assert(callback.notCalled);
         });
-        it('should only match the right handler for payload when both have the same callback_id', function () {
+
+        it('should only match the right handler for payload when both have the same callback_id', () => {
           // the following payloads have the same callback_id
-          const actionPayload = this.buttonPayload;
-          const optionsPayload = this.optionsFromDialogPayload;
+          const actionPayload = buttonPayload;
+          const optionsPayload = optionsFromDialogPayload;
           const actionCallback = sinon.spy();
           const optionsCallback = sinon.spy();
-          this.adapter.action(actionPayload.callback_id, actionCallback);
-          this.adapter.options(actionPayload.callback_id, optionsCallback);
+          adapter.action(actionPayload.callback_id, actionCallback);
+          adapter.options(actionPayload.callback_id, optionsCallback);
 
-          this.adapter.dispatch(actionPayload);
+          adapter.dispatch(actionPayload);
 
           assert(actionCallback.called);
           assert(optionsCallback.notCalled);
 
-          this.adapter.dispatch(optionsPayload);
+          adapter.dispatch(optionsPayload);
 
           assert(optionsCallback.calledOnce);
           assert(actionCallback.calledOnce);
@@ -1172,25 +1190,24 @@ describe('SlackMessageAdapter', function () {
       });
     });
 
-    describe('callback error handling', function () {
-      it('should respond with an error when the registered callback throws', function () {
-        let response;
-        this.adapter.action('a', function () {
+    describe('callback error handling', () => {
+      it('should respond with an error when the registered callback throws', () => {
+        adapter.action('a', () => {
           throw new Error('test error');
         });
-        response = this.adapter.dispatch({ callback_id: 'a', actions: [{}] });
+        const response = adapter.dispatch({ callback_id: 'a', actions: [{}] });
         return assertResponseStatusAndMessage(response, 500);
       });
 
-      it('should fail with an error when calling respond inside a callback with a promise', function (done) {
-        this.adapter.action('a', function (payload, respond) {
+      it('should fail with an error when calling respond inside a callback with a promise', (done) => {
+        adapter.action('a', (payload, respond) => {
           assert.isFunction(respond);
-          assert.throws(function () {
+          assert.throws(() => {
             respond(Promise.resolve('b'));
           }, TypeError);
           done();
         });
-        this.adapter.dispatch({ callback_id: 'a', actions: [{}], response_url: 'http://example.com' });
+        adapter.dispatch({ callback_id: 'a', actions: [{}], response_url: 'http://example.com' });
       });
     });
   });

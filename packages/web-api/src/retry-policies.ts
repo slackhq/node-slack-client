@@ -3,8 +3,7 @@ import { Options } from 'p-retry';
 /**
  * Options to create retry policies. Extends from https://github.com/tim-kos/node-retry.
  */
-export interface RetryOptions extends Options {
-}
+export type RetryOptions = Options;
 
 /**
  * The default retry policy. Retry up to 10 times, over the span of about 30 minutes. It's not exact because

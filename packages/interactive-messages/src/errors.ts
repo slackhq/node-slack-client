@@ -22,6 +22,8 @@ export interface CodedError extends Error {
 
 /**
  * Factory for producing a {@link CodedError} from a generic error.
+ * @param error error to extend
+ * @param code error code to append
  */
 export function errorWithCode(error: Error, code: ErrorCode): CodedError {
   const codedError = error as CodedError;

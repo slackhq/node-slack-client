@@ -1,12 +1,11 @@
-/* tslint:disable import-name */
 import EventEmitter from 'events';
 import http, { RequestListener } from 'http';
 import debugFactory from 'debug';
 import isString from 'lodash.isstring';
+// eslint-disable-next-line import/no-extraneous-dependencies
+import { RequestHandler } from 'express';
 import { createHTTPHandler } from './http-handler';
 import { isFalsy } from './util';
-import { RequestHandler } from 'express'; // tslint:disable-line: no-implicit-dependencies
-/* tslint:enable import-name */
 
 const debug = debugFactory('@slack/events-api:adapter');
 
@@ -41,12 +40,13 @@ export class SlackEventAdapter extends EventEmitter {
 
   /**
    * @param signingSecret - The token used to authenticate signed requests from Slack's Events API.
+   * @param opts event adapter options
    * @param opts.includeBody - Whether to include the API event bodies in adapter event listeners.
    * @param opts.includeHeaders - Whether to include request headers in adapter event listeners.
    * @param opts.waitForResponse - When `true` prevents the adapter from responding by itself and leaves that up to
-   *   listeners.
+   * listeners.
    */
-  constructor(
+  public constructor(
     signingSecret: string,
     {
       includeBody = false,

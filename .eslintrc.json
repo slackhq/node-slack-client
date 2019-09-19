@@ -1,0 +1,96 @@
+{
+  "extends": [
+    "eslint:recommended",
+    "airbnb-base",
+    "plugin:import/typescript",
+    "plugin:@typescript-eslint/eslint-recommended",
+    "plugin:@typescript-eslint/recommended"
+  ],
+  "parser": "@typescript-eslint/parser",
+  "parserOptions": {
+    "ecmaVersion": 2018,
+    "sourceType": "module",
+    "project": "./tsconfig.base.json"
+  },
+  "plugins": [
+    "@typescript-eslint",
+    "import",
+    "jsdoc"
+  ],
+  "rules": {
+    "max-len": ["error", 120, {
+      "ignoreComments": true
+    }],
+    "quotes": [
+      "error",
+      "single",
+      {
+        "avoidEscape": true
+      }
+    ],
+    "class-methods-use-this": "off",
+    "no-restricted-syntax": "off",
+    "no-undef-init": "off",
+    "spaced-comment": ["error", "always", { "markers": ["/"] }],
+    "no-return-await": "error",
+    "operator-linebreak": ["error", "after"],
+    "no-param-reassign": "off",
+    "jsdoc/check-alignment": "error",
+    "jsdoc/check-indentation": "error",
+    "jsdoc/check-param-names": "error",
+    "jsdoc/check-tag-names": "error",
+    "jsdoc/implements-on-classes": "error",
+    "jsdoc/no-types": "error",
+    "jsdoc/require-jsdoc": ["error", {
+      "require": {
+        "FunctionDeclaration": true,
+        "MethodDefinition": true,
+        "ClassDeclaration": true
+      }
+    }],
+    "jsdoc/require-param": "error",
+    "jsdoc/require-param-description": "error",
+    "jsdoc/require-param-name": "error",
+    "jsdoc/valid-types": "error",
+    "import/prefer-default-export": "off",
+    "import/no-cycle": "off",
+    "@typescript-eslint/explicit-function-return-type": ["error", {
+      "allowExpressions": true,
+      "allowTypedFunctionExpressions": true
+    }],
+    "@typescript-eslint/indent": ["error", 2],
+    "@typescript-eslint/camelcase": ["error", {
+      "properties": "never"
+    }],
+    "@typescript-eslint/await-thenable": "error",
+    "@typescript-eslint/no-floating-promises": "error",
+    "@typescript-eslint/no-for-in-array": "error",
+    "@typescript-eslint/interface-name-prefix": "off",
+    "@typescript-eslint/no-use-before-define": "off",
+    "@typescript-eslint/no-explicit-any": "off",
+    "@typescript-eslint/no-unused-vars": "off"
+  },
+  "overrides": [
+    {
+      "files": "*.js",
+      "rules": {
+        "@typescript-eslint/no-var-requires": "off"
+      }
+    },
+    {
+      "files": "*.spec.{ts,js}",
+      "env": {
+        "mocha": true
+      },
+      "rules": {
+        "jsdoc/require-jsdoc": "off",
+        "func-names": "off",
+        "import/no-extraneous-dependencies": ["error", {
+          "devDependencies": true
+        }],
+        "arrow-body-style": "off",
+        "@typescript-eslint/no-non-null-assertion": "off"
+      }
+    }
+  ]
+}

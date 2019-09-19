@@ -19,12 +19,12 @@ export interface KeepAliveOptions {
  * opening a new one.
  */
 export class KeepAlive extends EventEmitter {
-
   /**
    * The amount of time in milliseconds to wait after the last outgoing message from the client to generate a ping
    * message.
    */
   private clientPingTimeout: number;
+
   /**
    * The amount of time in milliseconds to wait after a ping message for the server to respond with a message that
    * replies to that ping (a pong) or some message after that.
@@ -71,7 +71,10 @@ export class KeepAlive extends EventEmitter {
    */
   public recommendReconnect: boolean;
 
-  constructor({
+  /**
+   * @param options keep alive options
+   */
+  public constructor({
     clientPingTimeout = 6000,
     serverPongTimeout = 4000,
     logger = undefined,
@@ -97,6 +100,7 @@ export class KeepAlive extends EventEmitter {
 
   /**
    * Start monitoring the RTMClient. This method should only be called after the client's websocket is already open.
+   * @param client rtm client to start
    */
   public start(client: RTMClient): void {
     this.logger.debug('start monitoring');
@@ -127,8 +131,10 @@ export class KeepAlive extends EventEmitter {
       this.client.off('outgoing_message', this.setPingTimer);
       this.client.off('slack_event', this.attemptAcknowledgePong);
     }
-    this.lastPing = this.client = undefined;
-    this.recommendReconnect = this.isMonitoring = false;
+    this.lastPing = undefined;
+    this.client = undefined;
+    this.recommendReconnect = false;
+    this.isMonitoring = false;
   }
 
   /**
@@ -234,6 +240,7 @@ export class KeepAlive extends EventEmitter {
   /**
    * Determines if a giving incoming event can be treated as an acknowledgement for the outstanding ping, and then
    * clears the ping if so.
+   * @param _type type of event
    * @param event incoming slack event
    */
   private attemptAcknowledgePong(_type: string, event: { [key: string]: unknown }): void {

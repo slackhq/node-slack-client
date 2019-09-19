@@ -11,6 +11,8 @@ export const errorCodes = {
 
 /**
  * Factory method to create an instance of {@link SlackMessageAdapter}
+ * @param signingSecret secret to use for signing
+ * @param options adapter options
  */
 export function createMessageAdapter(signingSecret: string, options?: MessageAdapterOptions): SlackMessageAdapter {
   return new SlackMessageAdapter(signingSecret, options);

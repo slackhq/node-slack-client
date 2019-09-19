@@ -1,0 +1,26 @@
+{
+  "compilerOptions": {
+    "target": "es2017",
+    "module": "commonjs",
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+
+    "moduleResolution": "node",
+
+    // Not using this setting because its only used to require the package.json file, and that would change the
+    // structure of the files in the dist directory because package.json is not located inside src. It would be nice
+    // to use import instead of require(), but its not worth the tradeoff of restructuring the build (for now).
+    // "resolveJsonModule": true,
+  },
+  "jsdoc": {
+    "out": "support/jsdoc",
+    "access": "public"
+  }
+}
