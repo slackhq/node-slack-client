@@ -2,7 +2,7 @@ require('mocha');
 const fs = require('fs');
 const path = require('path');
 const { Agent } = require('https');
-const { assert } = require('chai');
+const { assert, AssertionError } = require('chai');
 const { WebClient } = require('./WebClient');
 const { ErrorCode } = require('./errors');
 const { LogLevel } = require('./logger');
@@ -91,15 +91,13 @@ describe('WebClient', function () {
           });
       });
 
-      it('should return results in a Promise', function () {
-        const r = this.client.apiCall('method');
-        return r.then(result => {
-          assert(result.ok);
-          this.scope.done();
-        });
+      it('should return results in a Promise', async function () {
+        const result = await this.client.apiCall('method');
+        assert(result.ok);
+        this.scope.done();
       });
 
-      it('should send warnings to logs', function() {
+      it('should send warnings to logs', async function() {
         const logger = {
           debug: sinon.spy(),
           info: sinon.spy(),
@@ -109,50 +107,41 @@ describe('WebClient', function () {
           setName: sinon.spy(),
         };
         const warnClient = new WebClient(token, { logLevel: LogLevel.WARN, logger });
-        return warnClient.apiCall('method')
-          .then(() => {
-            assert.isTrue(logger.warn.calledTwice);
-          });
+        await warnClient.apiCall('method');
+        assert.isTrue(logger.warn.calledTwice);
       });
     });
 
     describe('with OAuth scopes in the response headers', function () {
-      it('should expose a scopes and acceptedScopes properties on the result', function () {
+      it('should expose a scopes and acceptedScopes properties on the result', async function () {
         const scope = nock('https://slack.com')
           .post(/api/)
           .reply(200, { ok: true }, {
             'X-OAuth-Scopes': 'files:read, chat:write:bot',
             'X-Accepted-OAuth-Scopes': 'files:read'
           });
-        return this.client.apiCall('method')
-          .then((result) => {
-            assert.deepNestedInclude(result.response_metadata, { scopes: ['files:read', 'chat:write:bot'] });
-            assert.deepNestedInclude(result.response_metadata, { acceptedScopes: ['files:read'] });
-            scope.done();
-          })
+        const result = await this.client.apiCall('method');
+        assert.deepNestedInclude(result.response_metadata, { scopes: ['files:read', 'chat:write:bot'] });
+        assert.deepNestedInclude(result.response_metadata, { acceptedScopes: ['files:read'] });
+        scope.done();
       });
     });
 
     describe('when called with bad options', function () {
-      it('should reject its Promise with TypeError', function (done) {
+      it('should reject its Promise with TypeError', async function () {
         const results = [
           this.client.apiCall('method', 4),
           this.client.apiCall('method', 'a string'),
           this.client.apiCall('method', false),
         ];
-        const caughtErrors = results.map(r => {
-          return r
-            .then(() => {
-              // if any of these promises resolve, this test fails
-              assert(false);
-            })
-            .catch((error) => {
-              // each promise should reject with the right kind of error
-              assert.instanceOf(error, TypeError);
-            });
-        });
-        Promise.all(caughtErrors)
-          .then(() => done());
+        for (const resultPromise of results) {
+          try {
+            await resultPromise;
+            assert.fail();
+          } catch (error) {
+            assert.instanceOf(error, TypeError);
+          }
+        }
       });
     });
 
@@ -163,79 +152,85 @@ describe('WebClient', function () {
           .reply(500);
       });
 
-      it('should return a Promise which rejects on error', function (done) {
-        const r = this.client.apiCall('method')
-        r.catch((error) => {
-          assert.instanceOf(error, Error);
+      it('should return a Promise which rejects on error', async function () {
+        try {
+          await this.client.apiCall('method');
+          assert.fail();
+        } catch (error) {
           this.scope.done();
-          done();
-        });
+          assert.notInstanceOf(error, AssertionError);
+          assert.instanceOf(error, Error);
+        }
       });
     });
 
-    it('should fail with WebAPIPlatformError when the API response has an error', function (done) {
+    it('should fail with WebAPIPlatformError when the API response has an error', async function () {
       const scope = nock('https://slack.com')
         .post(/api/)
         .reply(200, { ok: false, error: 'bad error' });
-      this.client.apiCall('method')
-        .catch((error) => {
-          assert.instanceOf(error, Error);
-          assert.equal(error.code, ErrorCode.PlatformError);
-          assert.nestedPropertyVal(error, 'data.ok', false);
-          assert.nestedPropertyVal(error, 'data.error', 'bad error');
-          scope.done();
-          done();
-        });
+      try {
+        await this.client.apiCall('method');
+        assert.fail();
+      } catch (error) {
+        scope.done();
+        assert.notInstanceOf(error, AssertionError);
+        assert.instanceOf(error, Error);
+        assert.equal(error.code, ErrorCode.PlatformError);
+        assert.nestedPropertyVal(error, 'data.ok', false);
+        assert.nestedPropertyVal(error, 'data.error', 'bad error');
+      }
     });
 
-    it('should fail with WebAPIHTTPError when the API response has an unexpected status', function (done) {
+    it('should fail with WebAPIHTTPError when the API response has an unexpected status', async function () {
       const body = { foo: 'bar' };
       const scope = nock('https://slack.com')
         .post(/api/)
         .reply(500, body);
       const client = new WebClient(token, { retryConfig: { retries: 0 } });
-      client.apiCall('method')
-        .catch((error) => {
-          assert.instanceOf(error, Error);
-          assert.equal(error.code, ErrorCode.HTTPError);
-          assert.equal(error.statusCode, 500);
-          assert.exists(error.headers);
-          assert.deepEqual(error.body, body);
-          scope.done();
-          done();
-        });
+      try {
+        await client.apiCall('method');
+        assert.fail();
+      } catch (error) {
+        scope.done();
+        assert.notInstanceOf(error, AssertionError);
+        assert.instanceOf(error, Error);
+        assert.equal(error.code, ErrorCode.HTTPError);
+        assert.equal(error.statusCode, 500);
+        assert.exists(error.headers);
+        assert.deepEqual(error.body, body);
+      }
     });
 
-    it('should fail with WebAPIRequestError when the API request fails', function (done) {
+    it('should fail with WebAPIRequestError when the API request fails', async function () {
       // One known request error is when the node encounters an ECONNREFUSED. In order to simulate this, rather than
       // using nock, we send the request to a host:port that is not listening.
       const client = new WebClient(token, { slackApiUrl: 'https://localhost:8999/api/', retryConfig: { retries: 0 } });
-      client.apiCall('method')
-        .catch((error) => {
-          assert.instanceOf(error, Error);
-          assert.equal(error.code, ErrorCode.RequestError);
-          assert.instanceOf(error.original, Error);
-          done();
-        });
+      try {
+        await client.apiCall('method');
+        assert.fail();
+      } catch (error) {
+        assert.notInstanceOf(error, AssertionError);
+        assert.instanceOf(error, Error);
+        assert.equal(error.code, ErrorCode.RequestError);
+        assert.instanceOf(error.original, Error);
+      }
     });
 
-    it('should properly serialize simple API arguments', function () {
+    it('should properly serialize simple API arguments', async function () {
       const scope = nock('https://slack.com')
         // NOTE: this could create false negatives if the serialization order changes (it shouldn't matter)
         .post(/api/, 'token=xoxb-faketoken&foo=stringval&bar=42&baz=false')
         .reply(200, { ok: true });
-      return this.client.apiCall('method', { foo: 'stringval', bar: 42, baz: false })
-        .then(() => {
-          scope.done();
-        });
+      await this.client.apiCall('method', { foo: 'stringval', bar: 42, baz: false });
+      scope.done();
     });
 
-    it('should properly serialize complex API arguments', function () {
+    it('should properly serialize complex API arguments', async function () {
       const scope = nock('https://slack.com')
         // NOTE: this could create false negatives if the serialization order changes (it shouldn't matter)
         .post(/api/, 'token=xoxb-faketoken&arraything=%5B%7B%22foo%22%3A%22stringval%22%2C%22bar%22%3A42%2C%22baz%22%3Afalse%2C%22zup%22%3A%5B%22one%22%2C%22two%22%2C%22three%22%5D%7D%5D&objectthing=%7B%22foo%22%3A7%2C%22hum%22%3Afalse%7D')
         .reply(200, { ok: true });
-      return this.client.apiCall('method', {
+      await this.client.apiCall('method', {
         // TODO: include things like quotes and emojis
         arraything: [{
           foo: 'stringval',
@@ -247,24 +242,20 @@ describe('WebClient', function () {
           foo: 7,
           hum: false,
         },
-      })
-        .then(() => {
-          scope.done();
-        });
+      });
+      scope.done();
     });
 
-    it('should remove undefined or null values from simple API arguments', function () {
+    it('should remove undefined or null values from simple API arguments', async function () {
       const scope = nock('https://slack.com')
         .post(/api/, 'token=xoxb-faketoken&something=else')
         .reply(200, { ok: true });
-      return this.client.apiCall('method', {
+      await this.client.apiCall('method', {
         something_undefined: undefined,
         something_null: null,
         something: 'else'
-      })
-      .then(() => {
-        scope.done();
       });
+      scope.done();
     });
 
     describe('when API arguments contain binary to upload', function () {
@@ -307,57 +298,51 @@ describe('WebClient', function () {
           });
       });
 
-      it('should properly serialize when the binary argument is a ReadableStream', function () {
+      it('should properly serialize when the binary argument is a ReadableStream', async function () {
         const imageStream = fs.createReadStream(path.resolve('test', 'fixtures', 'train.jpg'));
 
-        return this.client.apiCall('upload', {
-            someBinaryField: imageStream,
-          })
-          .then((parts) => {
-            assert.lengthOf(parts.files, 1);
-            const file = parts.files[0];
-            // the filename is picked up from the the ReadableStream since it originates from fs
-            assert.include(file, { fieldname: 'someBinaryField', filename: 'train.jpg' });
+        const parts = await this.client.apiCall('upload', {
+          someBinaryField: imageStream,
+        });
+        assert.lengthOf(parts.files, 1);
+        const file = parts.files[0];
+        // the filename is picked up from the the ReadableStream since it originates from fs
+        assert.include(file, { fieldname: 'someBinaryField', filename: 'train.jpg' });
 
-            assert.lengthOf(parts.fields, 1);
-            assert.deepInclude(parts.fields, { fieldname: 'token', value: token });
-          });
+        assert.lengthOf(parts.fields, 1);
+        assert.deepInclude(parts.fields, { fieldname: 'token', value: token });
       });
 
       // TODO: some tests with streams/buffers that originate from formiddable and/or request
 
-      it('should use a default name when binary argument is a Buffer', function () {
+      it('should use a default name when binary argument is a Buffer', async function () {
         const imageBuffer = fs.readFileSync(path.resolve('test', 'fixtures', 'train.jpg'));
 
         // intentially vague about the method name and argument name
-        return this.client.apiCall('upload', {
+        const parts = await this.client.apiCall('upload', {
           someBinaryField: imageBuffer,
-        })
-          .then((parts) => {
-            assert.lengthOf(parts.files, 1);
-            const file = parts.files[0];
-            assert.include(file, { fieldname: 'someBinaryField' });
-            assert.isString(file.filename);
-          });
+        });
+        assert.lengthOf(parts.files, 1);
+        const file = parts.files[0];
+        assert.include(file, { fieldname: 'someBinaryField' });
+        assert.isString(file.filename);
       });
 
-      it('should filter out undefined values', function () {
+      it('should filter out undefined values', async function () {
         const imageBuffer = fs.readFileSync(path.resolve('test', 'fixtures', 'train.jpg'));
 
-        return this.client.apiCall('upload', {
+        const parts = await this.client.apiCall('upload', {
           // the binary argument is necessary to trigger form data serialization
           someBinaryField: imageBuffer,
           someUndefinedField: undefined,
-        })
-          .then((parts) => {
-            // the only field is the one related to the token
-            assert.lengthOf(parts.fields, 1);
-          })
+        });
+        // the only field is the one related to the token
+        assert.lengthOf(parts.fields, 1);
       });
     });
 
     describe('metadata in the user agent', function () {
-      it('should set the user agent to contain package metadata', function () {
+      it('should set the user agent to contain package metadata', async function () {
         const scope = nock('https://slack.com', {
           reqheaders: {
             'User-Agent': (value) => {
@@ -375,13 +360,11 @@ describe('WebClient', function () {
         })
           .post(/api/)
           .reply(200, { ok: true });
-        return this.client.apiCall('method')
-          .then(() => {
-            scope.done();
-          });
+        await this.client.apiCall('method');
+        scope.done();
       });
 
-      it('should set the user agent to contain application metadata', function () {
+      it('should set the user agent to contain application metadata', async function () {
         const [name, version] = ['appmedataname', 'appmetadataversion'];
         addAppMetadata({ name, version });
         const scope = nock('https://slack.com', {
@@ -397,16 +380,14 @@ describe('WebClient', function () {
           .reply(200, { ok: true });
         // NOTE: appMetaData is only evalued on client construction, so we cannot use the client already created
         const client = new WebClient(token, { retryConfig: rapidRetryPolicy });
-        return client.apiCall('method')
-          .then(() => {
-            scope.done();
-          });
+        await client.apiCall('method');
+        scope.done();
       });
     });
   });
 
   describe('apiCall() - without a token', function () {
-    it('should make successful api calls', function () {
+    it('should make successful api calls', async function () {
       const client = new WebClient(undefined, { retryConfig: rapidRetryPolicy });
 
       const scope = nock('https://slack.com')
@@ -414,15 +395,13 @@ describe('WebClient', function () {
         .post(/api/, 'foo=stringval')
         .reply(200, { ok: true });
 
-      const r = client.apiCall('method', { foo: 'stringval' });
-      return r.then((result) => {
-        scope.done();
-      });
+      await client.apiCall('method', { foo: 'stringval' });
+      scope.done();
     });
   });
 
   describe('apiCall() - when using static headers', function () {
-    it('should include static headers on api request', function () {
+    it('should include static headers on api request', async function () {
       const client = new WebClient(token, { headers: { 'X-XYZ': 'value' } });
       const scope = nock('https://slack.com', {
         reqheaders: {
@@ -431,10 +410,8 @@ describe('WebClient', function () {
       })
         .post(/api/)
         .reply(200, { ok: true });
-      const r = client.apiCall('method');
-      return r.then((result) => {
-        scope.done();
-      });
+      await client.apiCall('method');
+      scope.done();
     });
   });
 
@@ -442,7 +419,7 @@ describe('WebClient', function () {
     beforeEach(function () {
       this.client = new WebClient(token, { retryConfig: rapidRetryPolicy });
     });
-    it('should properly mount methods as functions', function () {
+    it('should properly mount methods as functions', async function () {
       // This test doesn't exhaustively check all the method aliases, it just tries a couple.
       // This should be enough since all methods are mounted in the exact same way.
       const scope = nock('https://slack.com')
@@ -451,10 +428,8 @@ describe('WebClient', function () {
         // Trying this method because its mounted one layer "deeper"
         .post('/api/team.profile.get', 'token=xoxb-faketoken')
         .reply(200, { ok: true });
-      return Promise.all([this.client.chat.postMessage({ foo: 'stringval' }), this.client.team.profile.get()])
-        .then(() => {
-          scope.done();
-        });
+      await Promise.all([this.client.chat.postMessage({ foo: 'stringval' }), this.client.team.profile.get()]);
+      scope.done();
     });
   })
 
@@ -652,23 +627,19 @@ describe('WebClient', function () {
   });
 
   describe('has an option to set a custom HTTP agent', function () {
-    it('should send a request using the custom agent', function () {
+    it('should send a request using the custom agent', async function () {
       const agent = new Agent({ keepAlive: true });
       const spy = sinon.spy(agent, 'addRequest');
       const client = new WebClient(token, { agent, retryConfig: rapidRetryPolicy });
-      return client.apiCall('method')
-        .catch(() => {
-          assert(spy.called);
-        })
-        .then(() => {
-          agent.addRequest.restore();
-          agent.destroy();
-        })
-        .catch((error) => {
-          agent.addRequest.restore();
-          agent.destroy();
-          throw error;
-        });
+      try {
+        await client.apiCall('method');
+        assert.fail();
+      } catch (error) {
+        agent.addRequest.restore();
+        agent.destroy();
+        assert.notInstanceOf(error, AssertionError);
+        assert(spy.called);
+      }
     });
   });
 
@@ -691,7 +662,7 @@ describe('WebClient', function () {
         });
     });
 
-    it('should have a default conncurrency of 3', function () {
+    it('should have a default conncurrency of 3', async function () {
       const client = new WebClient(token);
       const requests = [
         client.apiCall('1'),
@@ -699,39 +670,35 @@ describe('WebClient', function () {
         client.apiCall('3'),
         client.apiCall('4'),
       ];
-      return Promise.all(requests)
-        .then((responses) => {
-          // verify all responses are present
-          assert.lengthOf(responses, 4);
+      const responses = await Promise.all(requests);
+      // verify all responses are present
+      assert.lengthOf(responses, 4);
 
-          // verify that maxRequestConcurrency requests were all sent concurrently
-          const concurrentResponses = responses.slice(0, 3); // the first 3 responses
-          concurrentResponses.forEach(r => assert.isBelow(r.diff, responseDelay));
+      // verify that maxRequestConcurrency requests were all sent concurrently
+      const concurrentResponses = responses.slice(0, 3); // the first 3 responses
+      concurrentResponses.forEach(r => assert.isBelow(r.diff, responseDelay));
 
-          // verify that any requests after maxRequestConcurrency were delayed by the responseDelay
-          const queuedResponses = responses.slice(3);
-          const minDiff = concurrentResponses[concurrentResponses.length - 1].diff + responseDelay;
-          queuedResponses.forEach(r => assert.isAtLeast(r.diff, minDiff));
-        });
+      // verify that any requests after maxRequestConcurrency were delayed by the responseDelay
+      const queuedResponses = responses.slice(3);
+      const minDiff = concurrentResponses[concurrentResponses.length - 1].diff + responseDelay;
+      queuedResponses.forEach(r => assert.isAtLeast(r.diff, minDiff));
     });
 
-    it('should allow concurrency to be set', function () {
+    it('should allow concurrency to be set', async function () {
       const client = new WebClient(token, { maxRequestConcurrency: 1 });
       const requests = [client.apiCall('1'), client.apiCall('2')];
-      return Promise.all(requests)
-        .then((responses) => {
-          // verify all responses are present
-          assert.lengthOf(responses, 2);
+      const responses = await Promise.all(requests)
+      // verify all responses are present
+      assert.lengthOf(responses, 2);
 
-          // verify that maxRequestConcurrency requets were all sent concurrently
-          const concurrentResponses = responses.slice(0, 1); // the first response
-          concurrentResponses.forEach(r => assert.isBelow(r.diff, responseDelay));
+      // verify that maxRequestConcurrency requets were all sent concurrently
+      const concurrentResponses = responses.slice(0, 1); // the first response
+      concurrentResponses.forEach(r => assert.isBelow(r.diff, responseDelay));
 
-          // verify that any requests after maxRequestConcurrency were delayed by the responseDelay
-          const queuedResponses = responses.slice(1);// the second response
-          const minDiff = concurrentResponses[concurrentResponses.length - 1].diff + responseDelay;
-          queuedResponses.forEach(r => { assert.isAtLeast(r.diff, minDiff) });
-        });
+      // verify that any requests after maxRequestConcurrency were delayed by the responseDelay
+      const queuedResponses = responses.slice(1);// the second response
+      const minDiff = concurrentResponses[concurrentResponses.length - 1].diff + responseDelay;
+      queuedResponses.forEach(r => { assert.isAtLeast(r.diff, minDiff) });
     });
 
     afterEach(function () {
@@ -740,31 +707,27 @@ describe('WebClient', function () {
   });
 
   describe('has an option to set the retry policy ', function () {
-    it('retries a request which fails to get a response', function () {
+    it('retries a request which fails to get a response', async function () {
       const scope = nock('https://slack.com')
         .post(/api/)
         .replyWithError('could be a ECONNREFUSED, ENOTFOUND, ETIMEDOUT, ECONNRESET')
         .post(/api/)
         .reply(200, { ok: true });
       const client = new WebClient(token, { retryConfig: rapidRetryPolicy });
-      return client.apiCall('method')
-        .then((resp) => {
-          assert.propertyVal(resp, 'ok', true);
-          scope.done();
-        });
+      const resp = await client.apiCall('method');
+      assert.propertyVal(resp, 'ok', true);
+      scope.done();
     });
-    it('retries a request whose response has a status code that is not 200 nor 429 (rate limited)', function () {
+    it('retries a request whose response has a status code that is not 200 nor 429 (rate limited)', async function () {
       const scope = nock('https://slack.com')
         .post(/api/)
         .reply(500)
         .post(/api/)
         .reply(200, { ok: true });
       const client = new WebClient(token, { retryConfig: rapidRetryPolicy });
-      return client.apiCall('method')
-        .then((resp) => {
-          assert.propertyVal(resp, 'ok', true);
-          scope.done();
-        });
+      const resp = await client.apiCall('method');
+      assert.propertyVal(resp, 'ok', true);
+      scope.done();
     });
   });
 
@@ -774,38 +737,42 @@ describe('WebClient', function () {
         this.client = new WebClient(token, { rejectRateLimitedCalls: true });
       });
 
-      it('should reject with a WebAPIRateLimitedError when a request fails due to rate-limiting', function (done) {
+      it('should reject with a WebAPIRateLimitedError when a request fails due to rate-limiting', async function () {
         const retryAfter = 5;
         const scope = nock('https://slack.com')
           .post(/api/)
           .reply(429, '', { 'retry-after': retryAfter });
-        this.client.apiCall('method')
-          .catch((error) => {
-            assert.instanceOf(error, Error);
-            assert.equal(error.code, ErrorCode.RateLimitedError);
-            assert.equal(error.retryAfter, retryAfter);
-            scope.done();
-            done();
-          });
+        try {
+          await this.client.apiCall('method');
+          assert.fail();
+        } catch (error) {
+          scope.done();
+          assert.notInstanceOf(error, AssertionError);
+          assert.instanceOf(error, Error);
+          assert.equal(error.code, ErrorCode.RateLimitedError);
+          assert.equal(error.retryAfter, retryAfter);
+        }
       });
 
-      it('should emit a rate_limited event on the client', function (done) {
+      it('should emit a rate_limited event on the client', async function () {
         const spy = sinon.spy();
         const scope = nock('https://slack.com')
           .post(/api/)
           .reply(429, {}, { 'retry-after': 0 });
         const client = new WebClient(token, { rejectRateLimitedCalls: true });
         client.on('rate_limited', spy);
-        client.apiCall('method')
-          .catch((err) => {
-            assert(spy.calledOnceWith(0))
-            scope.done();
-            done();
-          });
+        try {
+          await client.apiCall('method');
+          assert.fail();
+        } catch (error) {
+          scope.done();
+          assert.notInstanceOf(error, AssertionError);
+          assert(spy.calledOnceWith(0))
+        }
       });
     });
 
-    it('should automatically retry the request after the specified timeout', function () {
+    it('should automatically retry the request after the specified timeout', async function () {
       const retryAfter = 1;
       const scope = nock('https://slack.com')
         .post(/api/)
@@ -814,27 +781,23 @@ describe('WebClient', function () {
         .reply(200, { ok: true });
       const client = new WebClient(token, { retryConfig: rapidRetryPolicy });
       const startTime = Date.now();
-      return client.apiCall('method')
-        .then(() => {
-          const diff = Date.now() - startTime;
-          assert.isAtLeast(diff, retryAfter * 1000, 'elapsed time is at least a second');
-          scope.done();
-        });
+      await client.apiCall('method');
+      const diff = Date.now() - startTime;
+      assert.isAtLeast(diff, retryAfter * 1000, 'elapsed time is at least a second');
+      scope.done();
     });
 
-    it('should include retryAfter metadata if the response has retry info', function () {
+    it('should include retryAfter metadata if the response has retry info', async function () {
         const scope = nock('https://slack.com')
           .post(/api/)
           .reply(200, { ok: true }, { 'retry-after': 100 });
         const client = new WebClient(token);
-        return client.apiCall('method')
-          .then((data) => {
-            assert(data.response_metadata.retryAfter === 100);
-            scope.done();
-          });
+        const data = await client.apiCall('method');
+        assert(data.response_metadata.retryAfter === 100);
+        scope.done();
     });
 
-    it('should pause the remaining requests in queue', function () {
+    it('should pause the remaining requests in queue', async function () {
       const startTime = Date.now();
       const retryAfter = 1;
       const scope = nock('https://slack.com')
@@ -851,54 +814,58 @@ describe('WebClient', function () {
       const client = new WebClient(token, { retryConfig: rapidRetryPolicy, maxRequestConcurrency: 1 });
       const firstCall = client.apiCall('method');
       const secondCall = client.apiCall('method');
-      return Promise.all([firstCall, secondCall])
-        .then(([firstResult, secondResult]) => {
-          assert.isAtLeast(firstResult.diff, retryAfter * 1000);
-          assert.isAtLeast(secondResult.diff, retryAfter * 1000);
-          scope.done();
-        });
+      const [firstResult, secondResult] = await Promise.all([firstCall, secondCall]);
+      assert.isAtLeast(firstResult.diff, retryAfter * 1000);
+      assert.isAtLeast(secondResult.diff, retryAfter * 1000);
+      scope.done();
     });
 
-    it('should emit a rate_limited event on the client', function (done) {
+    it('should emit a rate_limited event on the client', async function () {
       const spy = sinon.spy();
       const scope = nock('https://slack.com')
         .post(/api/)
         .reply(429, {}, { 'retry-after': 0 });
       const client = new WebClient(token, { retryConfig: { retries: 0 } });
       client.on('rate_limited', spy);
-      client.apiCall('method')
-        .catch((err) => {
-          assert(spy.calledOnceWith(0))
-          scope.done();
-          done();
-        });
+      try {
+        await client.apiCall('method');
+        assert.fail();
+      } catch (error) {
+        scope.done();
+        assert.notInstanceOf(error, AssertionError);
+        assert(spy.calledOnceWith(0));
+      }
     });
   });
 
-  it('should throw an error if the response has no retry info', function (done) {
+  it('should throw an error if the response has no retry info', async function () {
       const scope = nock('https://slack.com')
         .post(/api/)
         .reply(429, {}, { 'retry-after': undefined });
       const client = new WebClient(token);
-      client.apiCall('method')
-        .catch((err) => {
-          assert.instanceOf(err, Error);
-          scope.done();
-          done();
-        });
+      try {
+        await client.apiCall('method');
+        assert.fail();
+      } catch (error) {
+        scope.done();
+        assert.notInstanceOf(error, AssertionError);
+        assert.instanceOf(error, Error);
+      }
   });
 
-  it('should throw an error if the response has an invalid retry-after header', function (done) {
+  it('should throw an error if the response has an invalid retry-after header', async function () {
       const scope = nock('https://slack.com')
         .post(/api/)
         .reply(429, {}, { 'retry-after': 'notanumber' });
       const client = new WebClient(token);
-      client.apiCall('method')
-        .catch((err) => {
-          assert.instanceOf(err, Error);
-          scope.done();
-          done();
-        });
+      try {
+        await client.apiCall('method');
+        assert.fail();
+      } catch (error) {
+        scope.done();
+        assert.notInstanceOf(error, AssertionError);
+        assert.instanceOf(error, Error);
+      }
   });
 
   describe('has all admin.inviteRequests.* APIs', function () {

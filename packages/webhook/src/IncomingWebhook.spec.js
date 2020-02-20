@@ -29,12 +29,10 @@ describe('IncomingWebhook', function () {
           .reply(200, 'ok');
       });
 
-      it('should return results in a Promise', function () {
-        const result = this.webhook.send('Hello');
-        return result.then((result) => {
-          assert.strictEqual(result.text, 'ok');
-          this.scope.done();
-        });
+      it('should return results in a Promise', async function () {
+        const result = await this.webhook.send('Hello');
+        assert.strictEqual(result.text, 'ok');
+        this.scope.done();
       });
     });
 
@@ -46,62 +44,63 @@ describe('IncomingWebhook', function () {
           .reply(this.statusCode);
       });
 
-      it('should return a Promise which rejects on error', function () {
-        const result = this.webhook.send('Hello');
-        return result.catch((error) => {
+      it('should return a Promise which rejects on error', async function () {
+        try {
+          await this.webhook.send('Hello');
+          assert.fail();
+        } catch (error) {
           assert.ok(error);
           assert.instanceOf(error, Error);
           assert.match(error.message, new RegExp(this.statusCode));
           this.scope.done();
-        });
+        }
       });
 
-      it('should fail with IncomingWebhookRequestError when the API request fails', function () {
+      it('should fail with IncomingWebhookRequestError when the API request fails', async function () {
         // One known request error is when the node encounters an ECONNREFUSED. In order to simulate this, rather than
         // using nock, we send the request to a host:port that is not listening.
         const webhook = new IncomingWebhook('https://localhost:8999/api/');
-        const result = webhook.send('Hello');
-        return result.catch((error) => {
+        try {
+          await webhook.send('Hello');
+          assert.fail();
+        } catch (error) {
           assert.instanceOf(error, Error);
           assert.equal(error.code, ErrorCode.RequestError);
           assert.instanceOf(error.original, Error);
-        });
+        }
       });
     });
 
     describe('lifecycle', function () {
-      it('should not overwrite the default parameters after a call', function () {
+      it('should not overwrite the default parameters after a call', async function () {
         const defaultParams  = { channel: 'default' };
         const expectedParams = Object.assign({}, defaultParams);
         const webhook        = new IncomingWebhook(url, defaultParams);
 
-        const result = webhook.send({ channel: 'different' });
-        return result.catch((error) => {
+        try {
+          await webhook.send({ channel: 'different' });
+          assert.fail();
+        } catch (error) {
           assert.deepEqual(webhook.defaults, expectedParams);
-        });
+        }
       });
     });
   });
 
   describe('has an option to set a custom HTTP agent', function () {
-    it('should send a request using the custom agent', function () {
+    it('should send a request using the custom agent', async function () {
       const agent = new Agent({ keepAlive: true });
       const spy = sinon.spy(agent, 'addRequest');
       const webhook = new IncomingWebhook(url, { agent });
 
-      return webhook.send('Hello')
-        .catch(() => {
-          assert(spy.called);
-        })
-        .then(() => {
-          agent.addRequest.restore();
-          agent.destroy();
-        })
-        .catch((error) => {
-          agent.addRequest.restore();
-          agent.destroy();
-          throw error;
-        });
+      try {
+        await webhook.send('Hello');
+        assert.fail();
+      } catch (error) {
+        agent.addRequest.restore();
+        agent.destroy();
+        assert(spy.called);
+      }
     });
   });
 
