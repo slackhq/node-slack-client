@@ -1,7 +1,7 @@
 import { Stream } from 'stream';
 import { Dialog, View, KnownBlock, Block, MessageAttachment, LinkUnfurls, CallUser } from '@slack/types';
-import { WebAPICallOptions, WebAPICallResult, WebClient, WebClientEvent } from './WebClient';
 import { EventEmitter } from 'eventemitter3';
+import { WebAPICallOptions, WebAPICallResult, WebClient, WebClientEvent } from './WebClient';
 
 // NOTE: could create a named type alias like data types like `SlackUserID: string`
 
@@ -51,34 +51,44 @@ export abstract class Methods extends EventEmitter<WebClientEvent> {
       },
       restrict: bindApiCall<AdminAppsRestrictArguments, WebAPICallResult>(this, 'admin.apps.restrict'),
       restricted: {
-        list:
-          bindApiCall<AdminAppsRestrictedListArguments, WebAPICallResult>(this, 'admin.apps.restricted.list'),
+        list: bindApiCall<AdminAppsRestrictedListArguments, WebAPICallResult>(this, 'admin.apps.restricted.list'),
       },
     },
     conversations: {
-      setTeams:
-        bindApiCall<AdminConversationsSetTeamsArguments, WebAPICallResult>(this, 'admin.conversations.setTeams'),
+      setTeams: bindApiCall<AdminConversationsSetTeamsArguments, WebAPICallResult>(
+        this,
+        'admin.conversations.setTeams',
+      ),
       restrictAccess: {
-        addGroup:
-          bindApiCall<AdminConversationsRestrictAccessAddGroupArguments, WebAPICallResult>(this, 'admin.conversations.restrictAccess.addGroup'),
-        listGroups:
-          bindApiCall<AdminConversationsRestrictAccessListGroupsArguments, WebAPICallResult>(this, 'admin.conversations.restrictAccess.listGroups'),
-        removeGroup:
-          bindApiCall<AdminConversationsRestrictAccessRemoveGroupArguments, WebAPICallResult>(this, 'admin.conversations.restrictAccess.removeGroup'),
+        addGroup: bindApiCall<AdminConversationsRestrictAccessAddGroupArguments, WebAPICallResult>(
+          this,
+          'admin.conversations.restrictAccess.addGroup',
+        ),
+        listGroups: bindApiCall<AdminConversationsRestrictAccessListGroupsArguments, WebAPICallResult>(
+          this,
+          'admin.conversations.restrictAccess.listGroups',
+        ),
+        removeGroup: bindApiCall<AdminConversationsRestrictAccessRemoveGroupArguments, WebAPICallResult>(
+          this,
+          'admin.conversations.restrictAccess.removeGroup',
+        ),
       },
     },
     inviteRequests: {
-      approve: bindApiCall<AdminInviteRequestsApproveArguments, WebAPICallResult>(
-        this, 'admin.inviteRequests.approve'),
+      approve: bindApiCall<AdminInviteRequestsApproveArguments, WebAPICallResult>(this, 'admin.inviteRequests.approve'),
       deny: bindApiCall<AdminInviteRequestsDenyArguments, WebAPICallResult>(this, 'admin.inviteRequests.deny'),
       list: bindApiCall<AdminInviteRequestsListArguments, WebAPICallResult>(this, 'admin.inviteRequests.list'),
       approved: {
         list: bindApiCall<AdminInviteRequestsApprovedListArguments, WebAPICallResult>(
-          this, 'admin.inviteRequests.approved.list'),
+          this,
+          'admin.inviteRequests.approved.list',
+        ),
       },
       denied: {
         list: bindApiCall<AdminInviteRequestsDeniedListArguments, WebAPICallResult>(
-          this, 'admin.inviteRequests.denied.list'),
+          this,
+          'admin.inviteRequests.denied.list',
+        ),
       },
     },
     teams: {
@@ -93,39 +103,52 @@ export abstract class Methods extends EventEmitter<WebClientEvent> {
       settings: {
         info: bindApiCall<AdminTeamsSettingsInfoArguments, WebAPICallResult>(this, 'admin.teams.settings.info'),
         setDefaultChannels: bindApiCall<AdminTeamsSettingsSetDefaultChannelsArguments, WebAPICallResult>(
-          this, 'admin.teams.settings.setDefaultChannels'),
+          this,
+          'admin.teams.settings.setDefaultChannels',
+        ),
         setDescription: bindApiCall<AdminTeamsSettingsSetDescriptionArguments, WebAPICallResult>(
-          this, 'admin.teams.settings.setDescription'),
+          this,
+          'admin.teams.settings.setDescription',
+        ),
         setDiscoverability: bindApiCall<AdminTeamsSettingsSetDiscoverabilityArguments, WebAPICallResult>(
-          this, 'admin.teams.settings.setDiscoverability'),
+          this,
+          'admin.teams.settings.setDiscoverability',
+        ),
         setIcon: bindApiCall<AdminTeamsSettingseSetIconArguments, WebAPICallResult>(
-          this, 'admin.teams.settings.setIcon'),
+          this,
+          'admin.teams.settings.setIcon',
+        ),
         setName: bindApiCall<AdminTeamsSettingsSetNameArguments, WebAPICallResult>(
-          this, 'admin.teams.settings.setName'),
+          this,
+          'admin.teams.settings.setName',
+        ),
       },
     },
     usergroups: {
       addChannels: bindApiCall<AdminUsergroupsAddChannelsArguments, WebAPICallResult>(
-        this, 'admin.usergroups.addChannels'),
-      addTeams: bindApiCall<AdminUsergroupsAddTeamsArguments, WebAPICallResult>(
-        this, 'admin.usergroups.addTeams'),
+        this,
+        'admin.usergroups.addChannels',
+      ),
+      addTeams: bindApiCall<AdminUsergroupsAddTeamsArguments, WebAPICallResult>(this, 'admin.usergroups.addTeams'),
       listChannels: bindApiCall<AdminUsergroupsListChannelsArguments, WebAPICallResult>(
-        this, 'admin.usergroups.listChannels'),
+        this,
+        'admin.usergroups.listChannels',
+      ),
       removeChannels: bindApiCall<AdminUsergroupsRemoveChannelsArguments, WebAPICallResult>(
-        this, 'admin.usergroups.removeChannels'),
+        this,
+        'admin.usergroups.removeChannels',
+      ),
     },
     users: {
       session: {
-        reset:
-          bindApiCall<AdminUsersSessionResetArguments, WebAPICallResult>(this, 'admin.users.session.reset'),
+        reset: bindApiCall<AdminUsersSessionResetArguments, WebAPICallResult>(this, 'admin.users.session.reset'),
       },
       assign: bindApiCall<AdminUsersAssignArguments, WebAPICallResult>(this, 'admin.users.assign'),
       invite: bindApiCall<AdminUsersInviteArguments, WebAPICallResult>(this, 'admin.users.invite'),
       list: bindApiCall<AdminUsersListArguments, WebAPICallResult>(this, 'admin.users.list'),
       remove: bindApiCall<AdminUsersRemoveArguments, WebAPICallResult>(this, 'admin.users.remove'),
       setAdmin: bindApiCall<AdminUsersSetAdminArguments, WebAPICallResult>(this, 'admin.users.setAdmin'),
-      setExpiration:
-        bindApiCall<AdminUsersSetExpirationArguments, WebAPICallResult>(this, 'admin.users.setExpiration'),
+      setExpiration: bindApiCall<AdminUsersSetExpirationArguments, WebAPICallResult>(this, 'admin.users.setExpiration'),
       setOwner: bindApiCall<AdminUsersSetOwnerArguments, WebAPICallResult>(this, 'admin.users.setOwner'),
       setRegular: bindApiCall<AdminUsersSetRegularArguments, WebAPICallResult>(this, 'admin.users.setRegular'),
     },
@@ -175,16 +198,17 @@ export abstract class Methods extends EventEmitter<WebClientEvent> {
 
   public readonly chat = {
     delete: bindApiCall<ChatDeleteArguments, WebAPICallResult>(this, 'chat.delete'),
-    deleteScheduledMessage:
-      bindApiCall<ChatDeleteScheduledMessageArguments, WebAPICallResult>(this, 'chat.deleteScheduledMessage'),
+    deleteScheduledMessage: bindApiCall<ChatDeleteScheduledMessageArguments, WebAPICallResult>(
+      this,
+      'chat.deleteScheduledMessage',
+    ),
     getPermalink: bindApiCall<ChatGetPermalinkArguments, WebAPICallResult>(this, 'chat.getPermalink'),
     meMessage: bindApiCall<ChatMeMessageArguments, WebAPICallResult>(this, 'chat.meMessage'),
     postEphemeral: bindApiCall<ChatPostEphemeralArguments, WebAPICallResult>(this, 'chat.postEphemeral'),
     postMessage: bindApiCall<ChatPostMessageArguments, WebAPICallResult>(this, 'chat.postMessage'),
     scheduleMessage: bindApiCall<ChatScheduleMessageArguments, WebAPICallResult>(this, 'chat.scheduleMessage'),
     scheduledMessages: {
-      list:
-        bindApiCall<ChatScheduledMessagesListArguments, WebAPICallResult>(this, 'chat.scheduledMessages.list'),
+      list: bindApiCall<ChatScheduledMessagesListArguments, WebAPICallResult>(this, 'chat.scheduledMessages.list'),
     },
     unfurl: bindApiCall<ChatUnfurlArguments, WebAPICallResult>(this, 'chat.unfurl'),
     update: bindApiCall<ChatUpdateArguments, WebAPICallResult>(this, 'chat.update'),
@@ -206,8 +230,7 @@ export abstract class Methods extends EventEmitter<WebClientEvent> {
     open: bindApiCall<ConversationsOpenArguments, WebAPICallResult>(this, 'conversations.open'),
     rename: bindApiCall<ConversationsRenameArguments, WebAPICallResult>(this, 'conversations.rename'),
     replies: bindApiCall<ConversationsRepliesArguments, WebAPICallResult>(this, 'conversations.replies'),
-    setPurpose:
-      bindApiCall<ConversationsSetPurposeArguments, WebAPICallResult>(this, 'conversations.setPurpose'),
+    setPurpose: bindApiCall<ConversationsSetPurposeArguments, WebAPICallResult>(this, 'conversations.setPurpose'),
     setTopic: bindApiCall<ConversationsSetTopicArguments, WebAPICallResult>(this, 'conversations.setTopic'),
     unarchive: bindApiCall<ConversationsUnarchiveArguments, WebAPICallResult>(this, 'conversations.unarchive'),
   };
@@ -239,10 +262,8 @@ export abstract class Methods extends EventEmitter<WebClientEvent> {
     delete: bindApiCall<FilesDeleteArguments, WebAPICallResult>(this, 'files.delete'),
     info: bindApiCall<FilesInfoArguments, WebAPICallResult>(this, 'files.info'),
     list: bindApiCall<FilesListArguments, WebAPICallResult>(this, 'files.list'),
-    revokePublicURL:
-      bindApiCall<FilesRevokePublicURLArguments, WebAPICallResult>(this, 'files.revokePublicURL'),
-    sharedPublicURL:
-      bindApiCall<FilesSharedPublicURLArguments, WebAPICallResult>(this, 'files.sharedPublicURL'),
+    revokePublicURL: bindApiCall<FilesRevokePublicURLArguments, WebAPICallResult>(this, 'files.revokePublicURL'),
+    sharedPublicURL: bindApiCall<FilesSharedPublicURLArguments, WebAPICallResult>(this, 'files.sharedPublicURL'),
     upload: bindApiCall<FilesUploadArguments, WebAPICallResult>(this, 'files.upload'),
     comments: {
       delete: bindApiCall<FilesCommentsDeleteArguments, WebAPICallResult>(this, 'files.comments.delete'),
@@ -440,9 +461,9 @@ export interface TraditionalPagingEnabled {
  * MethodArguments types (no formal relationship other than the generic constraint in Method<>)
  */
 
-  /*
-   * `admin.*`
-   */
+/*
+ * `admin.*`
+ */
 export interface AdminAppsApproveArguments extends WebAPICallOptions, TokenOverridable {
   app_id?: string;
   request_id?: string;
@@ -491,28 +512,29 @@ export interface AdminConversationsSetTeamsArguments extends WebAPICallOptions, 
   target_team_ids?: string[];
   org_channel?: boolean;
 }
-export interface AdminInviteRequestsApproveArguments
-  extends WebAPICallOptions, TokenOverridable {
+export interface AdminInviteRequestsApproveArguments extends WebAPICallOptions, TokenOverridable {
   invite_request_id: string;
   team_id: string;
 }
 export interface AdminInviteRequestsApprovedListArguments
-  extends WebAPICallOptions, TokenOverridable, CursorPaginationEnabled {
+  extends WebAPICallOptions,
+    TokenOverridable,
+    CursorPaginationEnabled {
   team_id: string;
 }
 cursorPaginationEnabledMethods.add('admin.inviteRequests.approved.list');
-export interface AdminInviteRequestsDenyArguments
-  extends WebAPICallOptions, TokenOverridable {
+export interface AdminInviteRequestsDenyArguments extends WebAPICallOptions, TokenOverridable {
   invite_request_id: string;
   team_id: string;
 }
 export interface AdminInviteRequestsDeniedListArguments
-  extends WebAPICallOptions, TokenOverridable, CursorPaginationEnabled {
+  extends WebAPICallOptions,
+    TokenOverridable,
+    CursorPaginationEnabled {
   team_id: string;
 }
 cursorPaginationEnabledMethods.add('admin.inviteRequests.denied.list');
-export interface AdminInviteRequestsListArguments
-  extends WebAPICallOptions, TokenOverridable, CursorPaginationEnabled {
+export interface AdminInviteRequestsListArguments extends WebAPICallOptions, TokenOverridable, CursorPaginationEnabled {
   team_id: string;
 }
 cursorPaginationEnabledMethods.add('admin.inviteRequests.list');
@@ -622,29 +644,29 @@ export interface AdminUsersSessionResetArguments extends WebAPICallOptions, Toke
   web_only?: boolean;
 }
 
-  /*
-   * `api.*`
-   */
+/*
+ * `api.*`
+ */
 export interface APITestArguments extends WebAPICallOptions {}
 
-  /*
-   * `auth.*`
-   */
+/*
+ * `auth.*`
+ */
 export interface AuthRevokeArguments extends WebAPICallOptions, TokenOverridable {
   test: boolean;
 }
 export interface AuthTestArguments extends WebAPICallOptions, TokenOverridable {}
 
-  /*
-   * `bots.*`
-   */
-export interface BotsInfoArguments extends WebAPICallOptions, TokenOverridable  {
+/*
+ * `bots.*`
+ */
+export interface BotsInfoArguments extends WebAPICallOptions, TokenOverridable {
   bot?: string;
 }
 
-  /*
-  * `calls.*`
-  */
+/*
+ * `calls.*`
+ */
 export interface CallsAddArguments extends WebAPICallOptions, TokenOverridable {
   external_unique_id: string;
   join_url: string;
@@ -682,9 +704,9 @@ export interface CallsParticipantsRemoveArguments extends WebAPICallOptions, Tok
   users: CallUser[];
 }
 
-  /*
-   * `channels.*`
-   */
+/*
+ * `channels.*`
+ */
 export interface ChannelsArchiveArguments extends WebAPICallOptions, TokenOverridable {
   channel: string;
 }
@@ -746,9 +768,9 @@ export interface ChannelsUnarchiveArguments extends WebAPICallOptions, TokenOver
   channel: string;
 }
 
-  /*
-   * `chat.*`
-   */
+/*
+ * `chat.*`
+ */
 export interface ChatDeleteArguments extends WebAPICallOptions, TokenOverridable {
   channel: string;
   ts: string;
@@ -808,8 +830,10 @@ export interface ChatScheduleMessageArguments extends WebAPICallOptions, TokenOv
   unfurl_links?: boolean;
   unfurl_media?: boolean;
 }
-export interface ChatScheduledMessagesListArguments extends WebAPICallOptions, TokenOverridable,
-  CursorPaginationEnabled {
+export interface ChatScheduledMessagesListArguments
+  extends WebAPICallOptions,
+    TokenOverridable,
+    CursorPaginationEnabled {
   channel: string;
   latest: number;
   oldest: number;
@@ -834,9 +858,9 @@ export interface ChatUpdateArguments extends WebAPICallOptions, TokenOverridable
   parse?: 'full' | 'none';
 }
 
-  /*
-   * `conversations.*`
-   */
+/*
+ * `conversations.*`
+ */
 export interface ConversationsArchiveArguments extends WebAPICallOptions, TokenOverridable {
   channel: string;
 }
@@ -847,8 +871,11 @@ export interface ConversationsCreateArguments extends WebAPICallOptions, TokenOv
   name: string;
   is_private?: boolean;
 }
-export interface ConversationsHistoryArguments extends WebAPICallOptions, TokenOverridable, CursorPaginationEnabled,
-  TimelinePaginationEnabled {
+export interface ConversationsHistoryArguments
+  extends WebAPICallOptions,
+    TokenOverridable,
+    CursorPaginationEnabled,
+    TimelinePaginationEnabled {
   channel: string;
 }
 cursorPaginationEnabledMethods.add('conversations.history');
@@ -891,8 +918,11 @@ export interface ConversationsRenameArguments extends WebAPICallOptions, TokenOv
   channel: string;
   name: string;
 }
-export interface ConversationsRepliesArguments extends WebAPICallOptions, TokenOverridable, CursorPaginationEnabled,
-  TimelinePaginationEnabled {
+export interface ConversationsRepliesArguments
+  extends WebAPICallOptions,
+    TokenOverridable,
+    CursorPaginationEnabled,
+    TimelinePaginationEnabled {
   channel: string;
   ts: string;
 }
@@ -909,17 +939,17 @@ export interface ConversationsUnarchiveArguments extends WebAPICallOptions, Toke
   channel: string;
 }
 
-  /*
-   * `dialog.*`
-   */
+/*
+ * `dialog.*`
+ */
 export interface DialogOpenArguments extends WebAPICallOptions, TokenOverridable {
   trigger_id: string;
   dialog: Dialog;
 }
 
-  /*
-   * `dnd.*`
-   */
+/*
+ * `dnd.*`
+ */
 export interface DndEndDndArguments extends WebAPICallOptions, TokenOverridable {}
 export interface DndEndSnoozeArguments extends WebAPICallOptions, TokenOverridable {}
 export interface DndInfoArguments extends WebAPICallOptions, TokenOverridable {
@@ -932,14 +962,14 @@ export interface DndTeamInfoArguments extends WebAPICallOptions, TokenOverridabl
   users?: string; // comma-separated list of users
 }
 
-  /*
-   * `emoji.*`
-   */
+/*
+ * `emoji.*`
+ */
 export interface EmojiListArguments extends WebAPICallOptions, TokenOverridable {}
 
-  /*
-   * `files.*`
-   */
+/*
+ * `files.*`
+ */
 export interface FilesDeleteArguments extends WebAPICallOptions, TokenOverridable {
   file: string; // file id
 }
@@ -1020,9 +1050,9 @@ export interface FilesRemoteShareArguments extends WebAPICallOptions, TokenOverr
   external_id?: string;
 }
 
-  /*
-   * `groups.*`
-   */
+/*
+ * `groups.*`
+ */
 export interface GroupsArchiveArguments extends WebAPICallOptions, TokenOverridable {
   channel: string;
 }
@@ -1085,9 +1115,9 @@ export interface GroupsUnarchiveArguments extends WebAPICallOptions, TokenOverri
   channel: string;
 }
 
-  /*
-   * `im.*`
-   */
+/*
+ * `im.*`
+ */
 export interface IMCloseArguments extends WebAPICallOptions, TokenOverridable {
   channel: string;
 }
@@ -1111,17 +1141,17 @@ export interface IMRepliesArguments extends WebAPICallOptions, TokenOverridable 
   thread_ts?: string;
 }
 
-  /*
-   * `migration.*`
-   */
+/*
+ * `migration.*`
+ */
 export interface MigrationExchangeArguments extends WebAPICallOptions, TokenOverridable {
   users: string; // comma-separated list of users
   to_old?: boolean;
 }
 
-  /*
-   * `mpim.*`
-   */
+/*
+ * `mpim.*`
+ */
 export interface MPIMCloseArguments extends WebAPICallOptions, TokenOverridable {
   channel: string;
 }
@@ -1144,9 +1174,9 @@ export interface MPIMRepliesArguments extends WebAPICallOptions, TokenOverridabl
   thread_ts: string;
 }
 
-  /*
-   * `oauth.*`
-   */
+/*
+ * `oauth.*`
+ */
 export interface OAuthAccessArguments extends WebAPICallOptions {
   client_id: string;
   client_secret: string;
@@ -1160,9 +1190,9 @@ export interface OAuthV2AccessArguments extends WebAPICallOptions {
   code: string;
   redirect_uri?: string;
 }
-  /*
-   * `pins.*`
-   */
+/*
+ * `pins.*`
+ */
 export interface PinsAddArguments extends WebAPICallOptions, TokenOverridable {
   channel: string;
   // must supply one of:
@@ -1181,9 +1211,9 @@ export interface PinsRemoveArguments extends WebAPICallOptions, TokenOverridable
   timestamp?: string;
 }
 
-  /*
-   * `reactions.*`
-   */
+/*
+ * `reactions.*`
+ */
 export interface ReactionsAddArguments extends WebAPICallOptions, TokenOverridable {
   name: string;
   // must supply one of:
@@ -1200,8 +1230,11 @@ export interface ReactionsGetArguments extends WebAPICallOptions, TokenOverridab
   file?: string; // file id
   file_comment?: string;
 }
-export interface ReactionsListArguments extends WebAPICallOptions, TokenOverridable,  TraditionalPagingEnabled,
-  CursorPaginationEnabled {
+export interface ReactionsListArguments
+  extends WebAPICallOptions,
+    TokenOverridable,
+    TraditionalPagingEnabled,
+    CursorPaginationEnabled {
   user?: string;
   full?: boolean;
 }
@@ -1215,9 +1248,9 @@ export interface ReactionsRemoveArguments extends WebAPICallOptions, TokenOverri
   file_comment?: string;
 }
 
-  /*
-   * `reminders.*`
-   */
+/*
+ * `reminders.*`
+ */
 export interface RemindersAddArguments extends WebAPICallOptions, TokenOverridable {
   text: string;
   time: string | number;
@@ -1234,9 +1267,9 @@ export interface RemindersInfoArguments extends WebAPICallOptions, TokenOverrida
 }
 export interface RemindersListArguments extends WebAPICallOptions, TokenOverridable {}
 
-  /*
-   * `rtm.*`
-   */
+/*
+ * `rtm.*`
+ */
 export interface RTMConnectArguments extends WebAPICallOptions, TokenOverridable {
   batch_presence_aware?: boolean;
   presence_sub?: boolean;
@@ -1250,19 +1283,24 @@ export interface RTMStartArguments extends WebAPICallOptions, TokenOverridable, 
   simple_latest?: boolean;
 }
 
-  /*
-   * `search.*`
-   */
-export interface SearchAllArguments extends WebAPICallOptions, TokenOverridable,  TraditionalPagingEnabled,
-  Searchable {}
-export interface SearchFilesArguments extends WebAPICallOptions, TokenOverridable, TraditionalPagingEnabled,
-  Searchable {}
-export interface SearchMessagesArguments extends WebAPICallOptions, TokenOverridable, TraditionalPagingEnabled,
-  Searchable {}
+/*
+ * `search.*`
+ */
+export interface SearchAllArguments extends WebAPICallOptions, TokenOverridable, TraditionalPagingEnabled, Searchable {}
+export interface SearchFilesArguments
+  extends WebAPICallOptions,
+    TokenOverridable,
+    TraditionalPagingEnabled,
+    Searchable {}
+export interface SearchMessagesArguments
+  extends WebAPICallOptions,
+    TokenOverridable,
+    TraditionalPagingEnabled,
+    Searchable {}
 
-  /*
-   * `stars.*`
-   */
+/*
+ * `stars.*`
+ */
 export interface StarsAddArguments extends WebAPICallOptions, TokenOverridable {
   // must supply one of:
   channel?: string; // paired with `timestamp`
@@ -1270,8 +1308,11 @@ export interface StarsAddArguments extends WebAPICallOptions, TokenOverridable {
   file?: string; // file id
   file_comment?: string;
 }
-export interface StarsListArguments extends WebAPICallOptions, TokenOverridable, TraditionalPagingEnabled,
-  CursorPaginationEnabled {}
+export interface StarsListArguments
+  extends WebAPICallOptions,
+    TokenOverridable,
+    TraditionalPagingEnabled,
+    CursorPaginationEnabled {}
 cursorPaginationEnabledMethods.add('stars.list');
 export interface StarsRemoveArguments extends WebAPICallOptions, TokenOverridable {
   // must supply one of:
@@ -1281,9 +1322,9 @@ export interface StarsRemoveArguments extends WebAPICallOptions, TokenOverridabl
   file_comment?: string;
 }
 
-  /*
-   * `team.*`
-   */
+/*
+ * `team.*`
+ */
 export interface TeamAccessLogsArguments extends WebAPICallOptions, TokenOverridable {
   before?: number;
   count?: number;
@@ -1305,9 +1346,9 @@ export interface TeamProfileGetArguments extends WebAPICallOptions, TokenOverrid
   visibility?: 'all' | 'visible' | 'hidden';
 }
 
-  /*
-   * `usergroups.*`
-   */
+/*
+ * `usergroups.*`
+ */
 export interface UsergroupsCreateArguments extends WebAPICallOptions, TokenOverridable {
   name: string;
   channels?: string; // comma-separated list of channels
@@ -1346,9 +1387,9 @@ export interface UsergroupsUsersUpdateArguments extends WebAPICallOptions, Token
   include_count?: boolean;
 }
 
-  /*
-   * `users.*`
-   */
+/*
+ * `users.*`
+ */
 export interface UsersConversationsArguments extends WebAPICallOptions, TokenOverridable, CursorPaginationEnabled {
   exclude_archived?: boolean;
   types?: string; // comma-separated list of conversation types

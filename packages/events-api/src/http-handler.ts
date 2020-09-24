@@ -1,4 +1,4 @@
-/* tslint:disable:import-name */
+/* eslint-disable */
 import debugFactory from 'debug';
 import getRawBody from 'raw-body';
 import crypto from 'crypto';
@@ -6,7 +6,7 @@ import timingSafeCompare from 'tsscmp';
 import { packageIdentifier, isFalsy } from './util';
 import SlackEventAdapter from './adapter';
 import { IncomingMessage, ServerResponse } from 'http';
-/* tslint:enable:import-name */
+/* eslint-enable */
 
 const debug = debugFactory('@slack/events-api:http-handler');
 
@@ -21,10 +21,13 @@ const debug = debugFactory('@slack/events-api:http-handler');
  * @returns `true` when the signature is valid.
  */
 export function verifyRequestSignature({
-  signingSecret, requestSignature, requestTimestamp, body,
+  signingSecret,
+  requestSignature,
+  requestTimestamp,
+  body,
 }: VerifyRequestSignatureParams): true {
   // convert the current time to seconds (to match the API's `ts` format), then subtract 5 minutes' worth of seconds.
-  const fiveMinutesAgo = Math.floor(Date.now() / 1000) - (60 * 5);
+  const fiveMinutesAgo = Math.floor(Date.now() / 1000) - 60 * 5;
 
   if (requestTimestamp < fiveMinutesAgo) {
     debug('request is older than 5 minutes');
@@ -56,7 +59,7 @@ export function createHTTPHandler(adapter: SlackEventAdapter): HTTPHandler {
   function sendResponse(res: ServerResponse): ResponseHandler {
     // This function is the completion handler for sending a response to an event. It can either
     // be invoked by automatically or by the user (when using the `waitForResponse` option).
-    return (err, responseOptions) => {
+    return (err, responseOptions): void => {
       debug('sending response - error: %s, responseOptions: %o', err, responseOptions);
       // Deal with errors up front
       if (!isFalsy(err)) {
@@ -114,14 +117,16 @@ export function createHTTPHandler(adapter: SlackEventAdapter): HTTPHandler {
         adapter.emit('error', error, respond);
       } else if (process.env.NODE_ENV === 'development') {
         adapter.emit('error', error);
-        // tslint:disable-next-line: no-object-literal-type-assertion
+        // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
         respond({ status: ResponseStatus.Failure } as ResponseError, { content: error.message });
       } else {
         adapter.emit('error', error);
         respond(error);
       }
     } catch (userError) {
-      process.nextTick(() => { throw userError; });
+      process.nextTick(() => {
+        throw userError;
+      });
     }
   }
 
@@ -132,7 +137,7 @@ export function createHTTPHandler(adapter: SlackEventAdapter): HTTPHandler {
    * @param req - The incoming request.
    * @param res - The outgoing response.
    */
-  return (req, res) => {
+  return (req, res): void => {
     debug('request recieved - method: %s, path: %s', req.method, req.url);
 
     // Bind a response function to this request's respond object.
@@ -140,10 +145,7 @@ export function createHTTPHandler(adapter: SlackEventAdapter): HTTPHandler {
 
     if (isFalsy(req.headers['x-slack-signature']) || isFalsy(req.headers['x-slack-request-timestamp'])) {
       handleError(
-        errorWithCode(
-          new Error('Slack request signing verification failed'),
-          ErrorCode.SignatureVerificationFailure,
-        ),
+        errorWithCode(new Error('Slack request signing verification failed'), ErrorCode.SignatureVerificationFailure),
         respond,
       );
       return;
@@ -178,12 +180,14 @@ export function createHTTPHandler(adapter: SlackEventAdapter): HTTPHandler {
     parseRawBody
       .then((bodyBuf) => {
         const rawBody = bodyBuf.toString();
-        if (verifyRequestSignature({
-          signingSecret: adapter.signingSecret,
-          requestSignature: req.headers['x-slack-signature'] as string,
-          requestTimestamp: parseInt(req.headers['x-slack-request-timestamp'] as string, 10),
-          body: rawBody,
-        })) {
+        if (
+          verifyRequestSignature({
+            signingSecret: adapter.signingSecret,
+            requestSignature: req.headers['x-slack-signature'] as string,
+            requestTimestamp: parseInt(req.headers['x-slack-request-timestamp'] as string, 10),
+            body: rawBody,
+          })
+        ) {
           // Request signature is verified
           // Parse raw body
           const body = JSON.parse(rawBody);
@@ -211,7 +215,8 @@ export function createHTTPHandler(adapter: SlackEventAdapter): HTTPHandler {
           debug('emitting event -  type: %s, arguments: %o', body.event.type, emitArguments);
           adapter.emit(body.event.type, ...emitArguments);
         }
-      }).catch((error) => {
+      })
+      .catch((error) => {
         handleError(error, respond);
       });
   };
@@ -231,16 +236,19 @@ enum ResponseStatus {
  * @remarks
  * See RequestListener in the `http` module.
  */
-type HTTPHandler = (req: IncomingMessage & { body?: any, rawBody?: Buffer }, res: ServerResponse) => void;
+type HTTPHandler = (req: IncomingMessage & { body?: any; rawBody?: Buffer }, res: ServerResponse) => void;
 
 /**
  * A Node-style response handler that takes an error (if any occurred) and a few response-related options.
  */
-export type ResponseHandler = (err?: ResponseError, responseOptions?: {
-  failWithNoRetry?: boolean;
-  redirectLocation?: boolean;
-  content?: any;
-}) => void;
+export type ResponseHandler = (
+  err?: ResponseError,
+  responseOptions?: {
+    failWithNoRetry?: boolean;
+    redirectLocation?: boolean;
+    content?: any;
+  },
+) => void;
 
 /**
  * An error (that may or may not have a status code) in response to a request.

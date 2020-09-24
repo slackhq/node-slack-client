@@ -1,7 +1,4 @@
-export {
-  Logger,
-  LogLevel,
-} from '@slack/logger';
+export { Logger, LogLevel } from '@slack/logger';
 
 // Using a wildcard (*) export because listing each individual method is cumbersome and hard to keep up to date.
 // The following export contains:
@@ -54,5 +51,5 @@ export * from '@slack/types';
 import { ErrorCode as WebAPIErrorCode } from '@slack/web-api';
 import { ErrorCode as RTMAPIErrorCode } from '@slack/rtm-api';
 import { ErrorCode as WebhookErrorCode } from '@slack/webhook';
-// tslint:disable-next-line:variable-name
+// eslint-disable-next-line @typescript-eslint/naming-convention, no-underscore-dangle, id-blacklist, id-match, prefer-object-spread
 export const ErrorCode = Object.assign({}, WebAPIErrorCode, RTMAPIErrorCode, WebhookErrorCode);

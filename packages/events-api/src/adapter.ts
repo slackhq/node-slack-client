@@ -1,12 +1,12 @@
-/* tslint:disable import-name */
+/* eslint-disable  */
 import EventEmitter from 'events';
 import http, { RequestListener } from 'http';
 import debugFactory from 'debug';
 import isString from 'lodash.isstring';
 import { createHTTPHandler } from './http-handler';
 import { isFalsy } from './util';
-import { RequestHandler } from 'express'; // tslint:disable-line: no-implicit-dependencies
-/* tslint:enable import-name */
+import { RequestHandler } from 'express'; // eslint-disable-line import/no-extraneous-dependencies
+/* eslint-enable  */
 
 const debug = debugFactory('@slack/events-api:adapter');
 
@@ -48,11 +48,7 @@ export class SlackEventAdapter extends EventEmitter {
    */
   constructor(
     signingSecret: string,
-    {
-      includeBody = false,
-      includeHeaders = false,
-      waitForResponse = false,
-    }: EventAdapterOptions = {},
+    { includeBody = false, includeHeaders = false, waitForResponse = false }: EventAdapterOptions = {},
   ) {
     if (!isString(signingSecret)) {
       throw new TypeError('SlackEventAdapter needs a signing secret');
@@ -87,13 +83,15 @@ export class SlackEventAdapter extends EventEmitter {
    * @returns The server from the built-in `http` module.
    */
   public start(port: number): Promise<http.Server> {
-    return this.createServer()
-      .then(server => new Promise((resolve, reject) => {
-        this.server = server;
-        server.on('error', reject);
-        server.listen(port, () => resolve(server));
-        debug('server started - port: %s', port);
-      }));
+    return this.createServer().then(
+      (server) =>
+        new Promise((resolve, reject) => {
+          this.server = server;
+          server.on('error', reject);
+          server.listen(port, () => resolve(server));
+          debug('server started - port: %s', port);
+        }),
+    );
   }
 
   /**
@@ -121,7 +119,7 @@ export class SlackEventAdapter extends EventEmitter {
    */
   public expressMiddleware(): RequestHandler {
     const requestListener = this.requestListener();
-    return (req, res, _next) => {
+    return (req, res, _next): void => {
       requestListener(req, res);
     };
   }

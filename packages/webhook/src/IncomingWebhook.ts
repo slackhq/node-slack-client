@@ -1,8 +1,8 @@
 import { Agent } from 'http';
 import axios, { AxiosInstance, AxiosResponse } from 'axios';
+import { MessageAttachment, Block, KnownBlock } from '@slack/types';
 import { httpErrorWithOriginal, requestErrorWithOriginal } from './errors';
 import { getUserAgent } from './instrument';
-import { MessageAttachment, Block, KnownBlock } from '@slack/types';
 
 /**
  * A client for Slack's Incoming Webhooks
@@ -51,7 +51,7 @@ export class IncomingWebhook {
    */
   public async send(message: string | IncomingWebhookSendArguments): Promise<IncomingWebhookResult> {
     // NOTE: no support for TLS config
-    let payload: IncomingWebhookSendArguments = Object.assign({}, this.defaults);
+    let payload: IncomingWebhookSendArguments = { ...this.defaults };
 
     if (typeof message === 'string') {
       payload.text = message;
@@ -77,6 +77,7 @@ export class IncomingWebhook {
   /**
    * Processes an HTTP response into an IncomingWebhookResult.
    */
+  // eslint-disable-next-line class-methods-use-this
   private buildResult(response: AxiosResponse): IncomingWebhookResult {
     return {
       text: response.data,

@@ -1,11 +1,14 @@
 import os from 'os';
-const pkg = require('../package.json'); // tslint:disable-line
+
+const pkg = require('../package.json'); // eslint-disable-line
 
 // TODO: expose an API to extend this
 // there will potentially be more named exports in this file
 export function packageIdentifier(): string {
-  return `${pkg.name.replace('/', ':')}/${pkg.version} ${os.platform()}/${os.release()} ` +
-    `node/${process.version.replace('v', '')}`;
+  return (
+    `${pkg.name.replace('/', ':')}/${pkg.version} ${os.platform()}/${os.release()} ` +
+    `node/${process.version.replace('v', '')}`
+  );
 }
 
 /**
@@ -15,5 +18,6 @@ export function packageIdentifier(): string {
  */
 export function isFalsy(x: any): x is 0 | '' | null | undefined {
   // NOTE: there's no way to type `x is NaN` currently (as of TypeScript v3.5)
+  // eslint-disable-next-line no-restricted-globals
   return x === 0 || x === '' || x === null || x === undefined || (typeof x === 'number' && isNaN(x));
 }

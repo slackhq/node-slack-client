@@ -1,4 +1,4 @@
-/* tslint:disable import-name */
+/* eslint-disable  */
 import { ServerResponse, IncomingHttpHeaders, IncomingMessage } from 'http';
 import * as querystring from 'querystring';
 import debugFactory from 'debug';
@@ -58,11 +58,7 @@ export function createHTTPHandler(adapter: SlackMessageAdapter): HTTPHandler {
    * @param body - Raw body string
    * @returns Indicates if request is verified
    */
-  function verifyRequestSignature(
-    signingSecret: string,
-    requestHeaders: VerificationHeaders,
-    body: string,
-  ): boolean {
+  function verifyRequestSignature(signingSecret: string, requestHeaders: VerificationHeaders, body: string): boolean {
     // Request signature
     const signature = requestHeaders['x-slack-signature'];
     // Request timestamp
@@ -70,7 +66,7 @@ export function createHTTPHandler(adapter: SlackMessageAdapter): HTTPHandler {
 
     // Divide current date to match Slack ts format
     // Subtract 5 minutes from current time
-    const fiveMinutesAgo = Math.floor(Date.now() / 1000) - (60 * 5);
+    const fiveMinutesAgo = Math.floor(Date.now() / 1000) - 60 * 5;
 
     if (ts < fiveMinutesAgo) {
       debug('request is older than 5 minutes');
@@ -107,9 +103,10 @@ export function createHTTPHandler(adapter: SlackMessageAdapter): HTTPHandler {
     if (!isFalsy(req.body) && isFalsy(req.rawBody)) {
       respond({
         status: 500,
-        content: process.env.NODE_ENV === 'development'
-          ? 'Parsing request body prohibits request signature verification'
-          : undefined,
+        content:
+          process.env.NODE_ENV === 'development'
+            ? 'Parsing request body prohibits request signature verification'
+            : undefined,
       });
       return;
     }
@@ -145,7 +142,7 @@ export function createHTTPHandler(adapter: SlackMessageAdapter): HTTPHandler {
 
           if (dispatchResult !== undefined) {
             // TODO: handle this after responding?
-            // tslint:disable-next-line no-floating-promises
+            // eslint-disable-next-line  @typescript-eslint/no-floating-promises
             dispatchResult.then(respond);
           } else {
             // No callback was matched
@@ -153,7 +150,8 @@ export function createHTTPHandler(adapter: SlackMessageAdapter): HTTPHandler {
             respond({ status: 404 });
           }
         }
-      }).catch((error) => {
+      })
+      .catch((error) => {
         if (error.code === ErrorCode.SignatureVerificationFailure || error.code === ErrorCode.RequestTimeFailure) {
           respond({ status: 404 });
         } else if (process.env.NODE_ENV === 'development') {
@@ -171,15 +169,12 @@ export function createHTTPHandler(adapter: SlackMessageAdapter): HTTPHandler {
  * @remarks
  * See RequestListener in the `http` module.
  */
-type HTTPHandler = (req: IncomingMessage & { body?: any, rawBody?: Buffer }, res: ServerResponse) => void;
+type HTTPHandler = (req: IncomingMessage & { body?: any; rawBody?: Buffer }, res: ServerResponse) => void;
 
 /**
  * A response handler returned by `sendResponse`.
  */
-type ResponseHandler = (dispatchResult: {
-  status: number,
-  content?: string | object,
-}) => void;
+type ResponseHandler = (dispatchResult: { status: number; content?: string | object }) => void;
 
 /**
  * Headers required for verification.

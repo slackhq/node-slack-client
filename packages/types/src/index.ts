@@ -1,4 +1,3 @@
-
 /*
  * Reusable shapes for argument values
  */
@@ -91,7 +90,11 @@ export interface Confirm {
 export type Select = UsersSelect | StaticSelect | ConversationsSelect | ChannelsSelect | ExternalSelect;
 
 export type MultiSelect =
-  MultiUsersSelect | MultiStaticSelect | MultiConversationsSelect | MultiChannelsSelect | MultiExternalSelect;
+  | MultiUsersSelect
+  | MultiStaticSelect
+  | MultiConversationsSelect
+  | MultiChannelsSelect
+  | MultiExternalSelect;
 
 export interface Action {
   type: string;
@@ -247,8 +250,15 @@ export interface PlainTextInput extends Action {
  * Block Types
  */
 
-export type KnownBlock = ImageBlock | ContextBlock | ActionsBlock | DividerBlock |
-  SectionBlock | InputBlock | FileBlock | HeaderBlock;
+export type KnownBlock =
+  | ImageBlock
+  | ContextBlock
+  | ActionsBlock
+  | DividerBlock
+  | SectionBlock
+  | InputBlock
+  | FileBlock
+  | HeaderBlock;
 
 export interface Block {
   type: string;
@@ -336,7 +346,7 @@ export interface AttachmentAction {
   name?: string;
   options?: OptionField[];
   option_groups?: {
-    text: string
+    text: string;
     options: OptionField[];
   }[];
   selected_options?: OptionField[];

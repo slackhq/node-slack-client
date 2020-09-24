@@ -1,59 +1,54 @@
 {
-	"folders": [
-		{
-			"name": "Node Slack SDK (root)",
-			"path": "."
-		},
-		{
-			"name": "Web API",
-			"path": "packages/web-api"
-		},
-		{
-			"name": "Events API",
-			"path": "packages/events-api"
-		},
-		{
-			"name": "Interactive Messages",
-			"path": "packages/interactive-messages"
-		},
-		{
-			"name": "RTM API",
-			"path": "packages/rtm-api"
-		},
-		{
-			"name": "Incoming Webhook",
-			"path": "packages/webhook"
-		},
-		{
-			"name": "Types",
-			"path": "packages/types"
-		},
-		{
-			"name": "Logger",
-			"path": "packages/logger"
-		},
-		{
-			"name": "Client (legacy)",
-			"path": "packages/client"
-		},
-		{
-			"name": "Integration Tests",
-			"path": "support/integration-tests"
-		},
-		{
-			"name": "Reference Documentation",
-			"path": "support/ref-docs"
-		}
-	],
-	"settings": {
-		"editor.rulers": [
-			120
-		],
-		"editor.tabSize": 2,
-		"typescript.tsdk": "RTM API/node_modules/typescript/lib",
-		"cSpell.words": [
-			"Overridable",
-			"workspaces"
-		],
-	}
+  "folders": [
+    {
+      "name": "Node Slack SDK (root)",
+      "path": "."
+    },
+    {
+      "name": "Web API",
+      "path": "packages/web-api"
+    },
+    {
+      "name": "Events API",
+      "path": "packages/events-api"
+    },
+    {
+      "name": "Interactive Messages",
+      "path": "packages/interactive-messages"
+    },
+    {
+      "name": "RTM API",
+      "path": "packages/rtm-api"
+    },
+    {
+      "name": "Incoming Webhook",
+      "path": "packages/webhook"
+    },
+    {
+      "name": "Types",
+      "path": "packages/types"
+    },
+    {
+      "name": "Logger",
+      "path": "packages/logger"
+    },
+    {
+      "name": "Client (legacy)",
+      "path": "packages/client"
+    },
+    {
+      "name": "Integration Tests",
+      "path": "support/integration-tests"
+    },
+    {
+      "name": "Reference Documentation",
+      "path": "support/ref-docs"
+    }
+  ],
+  "settings": {
+    "editor.rulers": [120],
+    "editor.tabSize": 2,
+    "typescript.tsdk": "RTM API/node_modules/typescript/lib",
+    "cSpell.words": ["Overridable", "workspaces"]
+  }
 }

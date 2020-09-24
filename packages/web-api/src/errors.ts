@@ -66,7 +66,7 @@ export function requestErrorWithOriginal(original: Error): WebAPIRequestError {
     ErrorCode.RequestError,
   ) as Partial<WebAPIRequestError>;
   error.original = original;
-  return (error as WebAPIRequestError);
+  return error as WebAPIRequestError;
 }
 
 /**
@@ -82,20 +82,19 @@ export function httpErrorFromResponse(response: AxiosResponse): WebAPIHTTPError 
   error.statusMessage = response.statusText;
   error.headers = response.headers;
   error.body = response.data;
-  return (error as WebAPIHTTPError);
+  return error as WebAPIHTTPError;
 }
 
 /**
  * A factory to create WebAPIPlatformError objects
  * @param result - Web API call result
  */
-export function platformErrorFromResult(result: WebAPICallResult & { error: string; }): WebAPIPlatformError {
-  const error = errorWithCode(
-    new Error(`An API error occurred: ${result.error}`),
-    ErrorCode.PlatformError,
-  ) as Partial<WebAPIPlatformError>;
+export function platformErrorFromResult(result: WebAPICallResult & { error: string }): WebAPIPlatformError {
+  const error = errorWithCode(new Error(`An API error occurred: ${result.error}`), ErrorCode.PlatformError) as Partial<
+    WebAPIPlatformError
+  >;
   error.data = result;
-  return (error as WebAPIPlatformError);
+  return error as WebAPIPlatformError;
 }
 
 /**
@@ -108,5 +107,5 @@ export function rateLimitedErrorWithDelay(retrySec: number): WebAPIRateLimitedEr
     ErrorCode.RateLimitedError,
   ) as Partial<WebAPIRateLimitedError>;
   error.retryAfter = retrySec;
-  return (error as WebAPIRateLimitedError);
+  return error as WebAPIRateLimitedError;
 }

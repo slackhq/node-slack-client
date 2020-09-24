@@ -68,16 +68,19 @@ export interface Logger {
 export class ConsoleLogger implements Logger {
   /** Setting for level */
   private level: LogLevel;
+
   /** Name */
   private name: string;
+
   /** Map of labels for each log level */
   private static labels: Map<LogLevel, string> = (() => {
-    const entries = Object.entries(LogLevel) as ([string, LogLevel])[];
+    const entries = Object.entries(LogLevel) as [string, LogLevel][];
     const map = entries.map(([key, value]) => {
       return [value, `[${key}] `] as [LogLevel, string];
     });
     return new Map(map);
   })();
+
   /** Map of severity as comparable numbers for each log level */
   private static severity: { [key in LogLevel]: number } = {
     [LogLevel.ERROR]: 400,
@@ -117,6 +120,7 @@ export class ConsoleLogger implements Logger {
       console.debug(ConsoleLogger.labels.get(LogLevel.DEBUG), this.name, ...msg);
     }
   }
+
   /**
    * Log an info message
    */
@@ -125,6 +129,7 @@ export class ConsoleLogger implements Logger {
       console.info(ConsoleLogger.labels.get(LogLevel.INFO), this.name, ...msg);
     }
   }
+
   /**
    * Log a warning message
    */
@@ -133,6 +138,7 @@ export class ConsoleLogger implements Logger {
       console.warn(ConsoleLogger.labels.get(LogLevel.WARN), this.name, ...msg);
     }
   }
+
   /**
    * Log an error message
    */

@@ -19,12 +19,12 @@ export interface KeepAliveOptions {
  * opening a new one.
  */
 export class KeepAlive extends EventEmitter {
-
   /**
    * The amount of time in milliseconds to wait after the last outgoing message from the client to generate a ping
    * message.
    */
   private clientPingTimeout: number;
+
   /**
    * The amount of time in milliseconds to wait after a ping message for the server to respond with a message that
    * replies to that ping (a pong) or some message after that.
@@ -127,8 +127,10 @@ export class KeepAlive extends EventEmitter {
       this.client.off('outgoing_message', this.setPingTimer);
       this.client.off('slack_event', this.attemptAcknowledgePong);
     }
-    this.lastPing = this.client = undefined;
-    this.recommendReconnect = this.isMonitoring = false;
+    this.lastPing = undefined;
+    this.client = undefined;
+    this.recommendReconnect = false;
+    this.isMonitoring = false;
   }
 
   /**
@@ -172,7 +174,8 @@ export class KeepAlive extends EventEmitter {
         throw error;
       }
       this.logger.debug('ping timer expired, sending ping');
-      this.client.send('ping')
+      this.client
+        .send('ping')
         .then((messageId) => {
           if (this.client === undefined) {
             if (!this.isMonitoring) {
@@ -189,28 +192,25 @@ export class KeepAlive extends EventEmitter {
 
           this.logger.debug('setting pong timer');
 
-          this.pongTimer = setTimeout(
-            () => {
-              if (this.client === undefined) {
-                // if monitoring stopped before the pong timer fires, its safe to return
-                if (!this.isMonitoring) {
-                  this.logger.debug('stopped monitoring before pong timer fired');
-                  return;
-                }
-                const error = new Error('no client found');
-                (error as CodedError).code = ErrorCode.KeepAliveInconsistentState;
-                throw error;
+          this.pongTimer = setTimeout(() => {
+            if (this.client === undefined) {
+              // if monitoring stopped before the pong timer fires, its safe to return
+              if (!this.isMonitoring) {
+                this.logger.debug('stopped monitoring before pong timer fired');
+                return;
               }
-              // signal that this pong is done being handled
-              this.client.off('slack_event', this.attemptAcknowledgePong);
+              const error = new Error('no client found');
+              (error as CodedError).code = ErrorCode.KeepAliveInconsistentState;
+              throw error;
+            }
+            // signal that this pong is done being handled
+            this.client.off('slack_event', this.attemptAcknowledgePong);
 
-              // no pong received to acknowledge the last ping within the serverPongTimeout
-              this.logger.debug('pong timer expired, recommend reconnect');
-              this.recommendReconnect = true;
-              this.emit('recommend_reconnect');
-            },
-            this.serverPongTimeout,
-          );
+            // no pong received to acknowledge the last ping within the serverPongTimeout
+            this.logger.debug('pong timer expired, recommend reconnect');
+            this.recommendReconnect = true;
+            this.emit('recommend_reconnect');
+          }, this.serverPongTimeout);
 
           this.client.on('slack_event', this.attemptAcknowledgePong, this);
         })

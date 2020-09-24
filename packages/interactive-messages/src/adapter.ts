@@ -1,4 +1,4 @@
-/* tslint:disable import-name */
+/* eslint-disable  */
 import http, { RequestListener, Agent } from 'http';
 import axios, { AxiosInstance } from 'axios';
 import isString from 'lodash.isstring';
@@ -9,8 +9,8 @@ import debugFactory from 'debug';
 import { ErrorCode, CodedError } from './errors';
 import { createHTTPHandler } from './http-handler';
 import { packageIdentifier, promiseTimeout, isFalsy } from './util';
-import { RequestHandler } from 'express'; // tslint:disable-line no-implicit-dependencies - only a type is imported
-/* tslint:enable import-name */
+import { RequestHandler } from 'express'; // eslint-disable-line  import/no-extraneous-dependencies
+/* eslint-enable  */
 
 const debug = debugFactory('@slack/interactive-messages:adapter');
 
@@ -28,7 +28,7 @@ function formatMatchingConstraints<C extends AnyConstraints>(matchingConstraints
   if (!isPlainObject(matchingConstraints)) {
     ret.callbackId = matchingConstraints as string | RegExp;
   } else {
-    ret = Object.assign({}, matchingConstraints as C);
+    ret = { ...(matchingConstraints as C) };
   }
   return ret as C;
 }
@@ -39,8 +39,10 @@ function formatMatchingConstraints<C extends AnyConstraints>(matchingConstraints
  * @returns `false` represents successful validation, an error represents failure and describes why validation failed.
  */
 function validateConstraints(matchingConstraints: AnyConstraints): Error | false {
-  if (!isFalsy(matchingConstraints.callbackId) &&
-      !(isString(matchingConstraints.callbackId) || isRegExp(matchingConstraints.callbackId))) {
+  if (
+    !isFalsy(matchingConstraints.callbackId) &&
+    !(isString(matchingConstraints.callbackId) || isRegExp(matchingConstraints.callbackId))
+  ) {
     return new TypeError('Callback ID must be a string or RegExp');
   }
 
@@ -48,13 +50,17 @@ function validateConstraints(matchingConstraints: AnyConstraints): Error | false
     return false;
   }
 
-  if (!isFalsy(matchingConstraints.blockId) &&
-    !(isString(matchingConstraints.blockId) || isRegExp(matchingConstraints.blockId))) {
+  if (
+    !isFalsy(matchingConstraints.blockId) &&
+    !(isString(matchingConstraints.blockId) || isRegExp(matchingConstraints.blockId))
+  ) {
     return new TypeError('Block ID must be a string or RegExp');
   }
 
-  if (!isFalsy(matchingConstraints.actionId) &&
-    !(isString(matchingConstraints.actionId) || isRegExp(matchingConstraints.actionId))) {
+  if (
+    !isFalsy(matchingConstraints.actionId) &&
+    !(isString(matchingConstraints.actionId) || isRegExp(matchingConstraints.actionId))
+  ) {
     return new TypeError('Action ID must be a string or RegExp');
   }
 
@@ -67,12 +73,15 @@ function validateConstraints(matchingConstraints: AnyConstraints): Error | false
  * @returns `false` represents successful validation, an error represents failure and describes why validation failed.
  */
 function validateOptionsConstraints(optionsConstraints: OptionsConstraints): Error | false {
-  if (!isFalsy(optionsConstraints.within) &&
-    !(optionsConstraints.within === 'interactive_message' ||
+  if (
+    !isFalsy(optionsConstraints.within) &&
+    !(
+      optionsConstraints.within === 'interactive_message' ||
       optionsConstraints.within === 'block_actions' ||
-      optionsConstraints.within === 'dialog')
+      optionsConstraints.within === 'dialog'
+    )
   ) {
-    return new TypeError('Within must be \'block_actions\', \'interactive_message\' or \'dialog\'');
+    return new TypeError("Within must be 'block_actions', 'interactive_message' or 'dialog'");
   }
 
   // We don't need to validate unfurl, we'll just coerce it to a boolean
@@ -86,13 +95,14 @@ function validateOptionsConstraints(optionsConstraints: OptionsConstraints): Err
  * @returns `false` represents successful validation, an error represents failure and describes why validation failed.
  */
 function validateViewConstraints(viewConstraints: ViewConstraints): Error | false {
-  if (viewConstraints.externalId === null ||
-    ((!isFalsy(viewConstraints.externalId) &&
-    !(isString(viewConstraints.externalId) || isRegExp(viewConstraints.externalId))))) {
+  if (
+    viewConstraints.externalId === null ||
+    (!isFalsy(viewConstraints.externalId) &&
+      !(isString(viewConstraints.externalId) || isRegExp(viewConstraints.externalId)))
+  ) {
     return new TypeError('External ID must be a string or RegExp');
   }
-  if (viewConstraints.viewId === null ||
-    (!isFalsy(viewConstraints.viewId) && !isString(viewConstraints.viewId))) {
+  if (viewConstraints.viewId === null || (!isFalsy(viewConstraints.viewId) && !isString(viewConstraints.viewId))) {
     return new TypeError('View ID must be a string');
   }
   return false;
@@ -120,7 +130,9 @@ export class SlackMessageAdapter {
   public lateResponseFallbackEnabled: boolean;
 
   private callbacks: [StoredConstraints, Callback][];
+
   private axios: AxiosInstance;
+
   private server?: http.Server;
 
   /**
@@ -133,11 +145,10 @@ export class SlackMessageAdapter {
    *   fallback to a request for the response_url. this only works in cases where the semantic meaning of the response
    *   and the response_url are the same.
    */
-  constructor(signingSecret: string, {
-    syncResponseTimeout = 2500,
-    lateResponseFallbackEnabled = true,
-    agent = undefined,
-  }: MessageAdapterOptions = {}) {
+  constructor(
+    signingSecret: string,
+    { syncResponseTimeout = 2500, lateResponseFallbackEnabled = true, agent = undefined }: MessageAdapterOptions = {},
+  ) {
     if (!isString(signingSecret)) {
       throw new TypeError('SlackMessageAdapter needs a signing secret');
     }
@@ -188,13 +199,15 @@ export class SlackMessageAdapter {
    * @returns A promise that resolves once the server is ready
    */
   public start(port: number): Promise<http.Server> {
-    return this.createServer()
-      .then(server => new Promise((resolve, reject) => {
-        this.server = server;
-        server.on('error', reject);
-        server.listen(port, () => resolve(server));
-        debug('server started - port: %s', port);
-      }));
+    return this.createServer().then(
+      (server) =>
+        new Promise((resolve, reject) => {
+          this.server = server;
+          server.on('error', reject);
+          server.listen(port, () => resolve(server));
+          debug('server started - port: %s', port);
+        }),
+    );
   }
 
   /**
@@ -243,7 +256,7 @@ export class SlackMessageAdapter {
 
   /* Interface for adding handlers */
 
-  /* tslint:disable max-line-length */
+  /* eslint-disable  max-len */
   /**
    * Add a handler for an interactive message action.
    *
@@ -262,11 +275,8 @@ export class SlackMessageAdapter {
    * @param callback - the function to run when an action is matched
    * @returns this instance (for chaining)
    */
-  /* tslint:enable max-line-length */
-  public action(
-    matchingConstraints: string | RegExp | ActionConstraints,
-    callback: ActionHandler,
-  ): this {
+  /* eslint-enable  max-len */
+  public action(matchingConstraints: string | RegExp | ActionConstraints, callback: ActionHandler): this {
     const actionConstraints = formatMatchingConstraints(matchingConstraints);
     const error = validateConstraints(actionConstraints);
     if (error) {
@@ -280,17 +290,14 @@ export class SlackMessageAdapter {
     return this.registerCallback(storableConstraints, callback);
   }
 
-  /* tslint:disable max-line-length */
+  /* eslint-disable  max-len */
   /*
-  * **Shortcut**|**Return `Promise<any>`**|**Return `any`**|**Notes**
-  * :-----:|:-----:|:-----:|:-----:|
-  * **Global Shortcut**| Empty response when Promise is resolved | Empty response | Returning a Promise that takes longer than 3 seconds to resolve can result in the user seeing an error.
-  */
-  /* tslint:enable max-line-length */
-  public shortcut(
-    matchingConstraints: string | RegExp | ShortcutConstraints,
-    callback: ShortcutHandler,
-  ): this {
+   * **Shortcut**|**Return `Promise<any>`**|**Return `any`**|**Notes**
+   * :-----:|:-----:|:-----:|:-----:|
+   * **Global Shortcut**| Empty response when Promise is resolved | Empty response | Returning a Promise that takes longer than 3 seconds to resolve can result in the user seeing an error.
+   */
+  /* eslint-enable  max-len */
+  public shortcut(matchingConstraints: string | RegExp | ShortcutConstraints, callback: ShortcutHandler): this {
     const shortcutConstraints = formatMatchingConstraints(matchingConstraints);
     const error = validateConstraints(shortcutConstraints);
     if (error) {
@@ -304,7 +311,7 @@ export class SlackMessageAdapter {
     return this.registerCallback(storableConstraints, callback);
   }
 
-  /* tslint:disable max-line-length */
+  /* eslint-disable  max-len */
   /**
    * Add a handler for an options request
    *
@@ -320,14 +327,10 @@ export class SlackMessageAdapter {
    * @param callback - the function to run when an options request is matched
    * @returns this instance (for chaining)
    */
-  /* tslint:enable max-line-length */
-  public options(
-    matchingConstraints: string | RegExp | OptionsConstraints,
-    callback: OptionsHandler,
-  ): this {
+  /* eslint-enable  max-len */
+  public options(matchingConstraints: string | RegExp | OptionsConstraints, callback: OptionsHandler): this {
     const optionsConstraints = formatMatchingConstraints(matchingConstraints);
-    const error = validateConstraints(optionsConstraints) ||
-      validateOptionsConstraints(optionsConstraints);
+    const error = validateConstraints(optionsConstraints) || validateOptionsConstraints(optionsConstraints);
     if (error) {
       debug('options could not be registered: %s', error.message);
       throw error;
@@ -414,13 +417,15 @@ export class SlackMessageAdapter {
     const [, callbackFn] = callback;
 
     // when a response_url is present,`respond()` function created to to send a message using it
-    const respond: Respond | undefined = payload.response_url ? (message: any): Promise<any> => {
-      if (typeof (message as any).then === 'function') {
-        throw new TypeError('Cannot use a Promise as the parameter for respond()');
-      }
-      debug('sending async response');
-      return this.axios.post(payload.response_url, message);
-    } : undefined;
+    const respond: Respond | undefined = payload.response_url
+      ? (message: any): Promise<any> => {
+          if (typeof (message as any).then === 'function') {
+            throw new TypeError('Cannot use a Promise as the parameter for respond()');
+          }
+          debug('sending async response');
+          return this.axios.post(payload.response_url, message);
+        }
+      : undefined;
 
     let callbackResult: any;
     try {
@@ -432,7 +437,7 @@ export class SlackMessageAdapter {
 
     if (!isFalsy(callbackResult)) {
       return promiseTimeout(this.syncResponseTimeout, callbackResult)
-        .then(content => ({ content, status: ResponseStatus.Ok }))
+        .then((content) => ({ content, status: ResponseStatus.Ok }))
         .catch<DispatchResult>((error: CodedError) => {
           if (error.code === ErrorCode.PromiseTimeout) {
             // warn and continue for promises that cannot be saved with a later async response.
@@ -442,7 +447,7 @@ export class SlackMessageAdapter {
             if (!this.lateResponseFallbackEnabled || respond === undefined || payload.type === 'dialog_submission') {
               debug('WARNING: The response Promise did not resolve under the timeout.');
               return (callbackResult as Promise<any>)
-                .then(content => ({ content, status: ResponseStatus.Ok }))
+                .then((content) => ({ content, status: ResponseStatus.Ok }))
                 .catch(() => ({ status: ResponseStatus.Failure }));
             }
 
@@ -486,10 +491,12 @@ export class SlackMessageAdapter {
       if (!isFalsy(constraints.callbackId)) {
         // The callback ID is located at a different path in the payload for view submission and view closed
         // than for actions
-        const callbackId = ((
-          constraints.handlerType === StoredConstraintsType.ViewSubmission ||
-          constraints.handlerType === StoredConstraintsType.ViewClosed
-        ) && payload.view) ? payload.view.callback_id : payload.callback_id;
+        const callbackId =
+          (constraints.handlerType === StoredConstraintsType.ViewSubmission ||
+            constraints.handlerType === StoredConstraintsType.ViewClosed) &&
+          payload.view
+            ? payload.view.callback_id
+            : payload.callback_id;
 
         if (isString(constraints.callbackId) && callbackId !== constraints.callbackId) {
           return false;
@@ -534,7 +541,7 @@ export class SlackMessageAdapter {
         // actions have a type defined at the top level, and select actions don't have a type
         // defined, but type can be inferred by checking if a `selected_options` property exists in
         // the action.
-        // tslint:disable-next-line strict-boolean-expressions
+        // eslint-disable-next-line  @typescript-eslint/strict-boolean-expressions
         const type = action.type || payload.type || (action.selected_options && 'select');
         if (!type) {
           debug('no type found in dispatched action');
@@ -545,11 +552,9 @@ export class SlackMessageAdapter {
         }
 
         // if the unfurl constraint is specified, only continue if it matches
-        if ('unfurl' in constraints &&
-          (
-            (constraints.unfurl && !payload.is_app_unfurl) ||
-            (!constraints.unfurl && payload.is_app_unfurl)
-          )
+        if (
+          'unfurl' in constraints &&
+          ((constraints.unfurl && !payload.is_app_unfurl) || (!constraints.unfurl && payload.is_app_unfurl))
         ) {
           return false;
         }
@@ -600,13 +605,16 @@ export class SlackMessageAdapter {
         }
       }
 
-      if (constraints.handlerType === StoredConstraintsType.ViewSubmission ||
+      if (
+        constraints.handlerType === StoredConstraintsType.ViewSubmission ||
         constraints.handlerType === StoredConstraintsType.ViewClosed
       ) {
         // a payload that represents a view submission always has a type property set to view_submission,
         // a payload that represents a view closed interaction always has a type property set to view_closed
-        if (!isFalsy(payload.type) &&
-          (constraints.handlerType === StoredConstraintsType.ViewSubmission && payload.type !== 'view_submission') ||
+        if (
+          (!isFalsy(payload.type) &&
+            constraints.handlerType === StoredConstraintsType.ViewSubmission &&
+            payload.type !== 'view_submission') ||
           (constraints.handlerType === StoredConstraintsType.ViewClosed && payload.type !== 'view_closed')
         ) {
           return false;
@@ -773,11 +781,11 @@ const enum StoredConstraintsType {
  * Internal storage type that describes the constraints of an ActionHandler or OptionsHandler.
  */
 export type StoredConstraints =
- | ({ handlerType: StoredConstraintsType.Action } & ActionConstraints)
- | ({ handlerType: StoredConstraintsType.Shortcut } & ShortcutConstraints)
- | ({ handlerType: StoredConstraintsType.Options } & OptionsConstraints)
- | ({ handlerType: StoredConstraintsType.ViewSubmission } & ViewConstraints)
- | ({ handlerType: StoredConstraintsType.ViewClosed } & ViewConstraints);
+  | ({ handlerType: StoredConstraintsType.Action } & ActionConstraints)
+  | ({ handlerType: StoredConstraintsType.Shortcut } & ShortcutConstraints)
+  | ({ handlerType: StoredConstraintsType.Options } & OptionsConstraints)
+  | ({ handlerType: StoredConstraintsType.ViewSubmission } & ViewConstraints)
+  | ({ handlerType: StoredConstraintsType.ViewClosed } & ViewConstraints);
 
 /**
  * A function used to send message updates after an action is handled. This function can be used
@@ -854,7 +862,7 @@ type Callback = ActionHandler | OptionsHandler | ViewSubmissionHandler | ViewClo
 
 function hasBlockRelatedConstraints(
   constraints: AnyConstraints,
-): constraints is (ActionConstraints | OptionsConstraints) {
-  const asBlockRelatedConstraints = constraints as (ActionConstraints | OptionsConstraints);
+): constraints is ActionConstraints | OptionsConstraints {
+  const asBlockRelatedConstraints = constraints as ActionConstraints | OptionsConstraints;
   return !(isFalsy(asBlockRelatedConstraints.blockId) && isFalsy(asBlockRelatedConstraints.actionId));
 }

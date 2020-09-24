@@ -1,0 +1,8 @@
+{
+  // extend your base config to share compilerOptions, etc
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    // ensure that this config cannot be used for a build
+    "noEmit": true
+  },
+}

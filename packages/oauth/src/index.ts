@@ -1,6 +1,7 @@
 import { IncomingMessage, ServerResponse } from 'http';
 import { sign, verify } from 'jsonwebtoken';
 import { WebClient, WebClientOptions } from '@slack/web-api';
+import { parse as parseUrl, URLSearchParams, URL } from 'url';
 import {
   CodedError,
   InstallerInitializationError,
@@ -9,7 +10,6 @@ import {
   GenerateInstallUrlError,
   AuthorizationError,
 } from './errors';
-import { parse as parseUrl, URLSearchParams, URL } from 'url';
 import { Logger, LogLevel, getLogger } from './logger';
 
 /**
@@ -25,10 +25,15 @@ import { Logger, LogLevel, getLogger } from './logger';
  */
 export class InstallProvider {
   public stateStore: StateStore;
+
   public installationStore: InstallationStore;
+
   private clientId: string;
+
   private clientSecret: string;
+
   private authVersion: string;
+
   private logger: Logger;
   private clientOptions: WebClientOptions;
   private authorizationUrl: string;
@@ -45,7 +50,6 @@ export class InstallProvider {
     clientOptions = {},
     authorizationUrl = 'https://slack.com/oauth/v2/authorize',
   }: InstallProviderOptions) {
-
     if (clientId === undefined || clientSecret === undefined) {
       throw new InstallerInitializationError('You must provide a valid clientId and clientSecret');
     }
@@ -119,7 +123,6 @@ export class InstallProvider {
    * Uses stateStore to generate a value for the state query param.
    */
   public async generateInstallUrl(options: InstallURLOptions): Promise<string> {
-
     const slackURL = new URL(this.authorizationUrl);
 
     if (options.scopes === undefined) {
@@ -176,11 +179,7 @@ export class InstallProvider {
    * query params for an access token, and stores token and associated data
    * in the installationStore.
    */
-  public async handleCallback(
-    req: IncomingMessage,
-    res: ServerResponse,
-    options?: CallbackOptions,
-  ): Promise<void> {
+  public async handleCallback(req: IncomingMessage, res: ServerResponse, options?: CallbackOptions): Promise<void> {
     let parsedUrl;
     let code: string;
     let state: string;
@@ -205,12 +204,12 @@ export class InstallProvider {
       let installation: Installation;
       if (this.authVersion === 'v1') {
         // convert response type from WebApiCallResult to OAuthResponse
-        resp = await client.oauth.access({
+        resp = ((await client.oauth.access({
           code,
           client_id: this.clientId,
           client_secret: this.clientSecret,
           redirect_uri: installOptions.redirectUri,
-        }) as unknown as OAuthV1Response;
+        })) as unknown) as OAuthV1Response;
 
         // resp obj for v1 - https://api.slack.com/methods/oauth.access#response
         installation = {
@@ -242,12 +241,12 @@ export class InstallProvider {
         }
       } else {
         // convert response type from WebApiCallResult to OAuthResponse
-        resp = await client.oauth.v2.access({
+        resp = ((await client.oauth.v2.access({
           code,
           client_id: this.clientId,
           client_secret: this.clientSecret,
           redirect_uri: installOptions.redirectUri,
-        }) as unknown as OAuthV2Response;
+        })) as unknown) as OAuthV2Response;
 
         // get botId
         const botId = await getBotId(resp.access_token, this.clientOptions);
@@ -358,23 +357,23 @@ interface OAuthV2Response {
   ok: boolean;
   app_id: string;
   authed_user: {
-    id: string,
-    scope?: string,
-    access_token?: string,
-    token_type?: string,
+    id: string;
+    scope?: string;
+    access_token?: string;
+    token_type?: string;
   };
   scope: string;
   token_type: string;
   access_token: string;
   bot_user_id: string;
-  team: { id: string, name: string };
-  enterprise: { name: string, id: string } | null;
+  team: { id: string; name: string };
+  enterprise: { name: string; id: string } | null;
   error?: string;
   incoming_webhook?: {
-    url: string,
-    channel: string,
-    channel_id: string,
-    configuration_url: string,
+    url: string;
+    channel: string;
+    channel_id: string;
+    configuration_url: string;
   };
   response_metadata: object;
 }
@@ -389,12 +388,12 @@ interface OAuthV1Response {
   team_id: string;
   enterprise_id: string | null;
   // if they request bot user token
-  bot?: { bot_user_id: string, bot_access_token: string };
+  bot?: { bot_user_id: string; bot_access_token: string };
   incoming_webhook?: {
-    url: string,
-    channel: string,
-    channel_id: string,
-    configuration_url: string,
+    url: string;
+    channel: string;
+    channel_id: string;
+    configuration_url: string;
   };
   response_metadata: object;
   error?: string;
@@ -421,7 +420,8 @@ interface StateObj {
 // default implementation of StateStore
 class ClearStateStore implements StateStore {
   private stateSecret: string;
-  public constructor(stateSecret: string) {
+
+  constructor(stateSecret: string) {
     this.stateSecret = stateSecret;
   }
 
@@ -429,6 +429,7 @@ class ClearStateStore implements StateStore {
     const state = sign({ installOptions, now: now.toJSON() }, this.stateSecret);
     return state;
   }
+
   public async verifyStateParam(_now: Date, state: string): Promise<InstallURLOptions> {
     // decode the state using the secret
     const decoded: StateObj = verify(state, this.stateSecret) as StateObj;
@@ -458,7 +459,7 @@ class MemoryInstallationStore implements InstallationStore {
     }
     // db write
     this.devDB[installation.team.id] = installation;
-    return;
+    
   }
 
   public async fetchInstallation(query: InstallationQuery, logger?: Logger): Promise<Installation> {
