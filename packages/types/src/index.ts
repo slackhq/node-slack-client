@@ -31,19 +31,36 @@ export interface Dialog {
   state?: string;
 }
 
-export interface View {
-  title?: PlainTextElement;
-  type: 'home' | 'modal' | 'workflow_step';
+interface HomeView {
+  type: 'home';
   blocks: (KnownBlock | Block)[];
+  private_metadata?: string;
   callback_id?: string;
+  external_id?: string;
+}
+
+interface ModalView {
+  type: 'modal';
+  title: PlainTextElement;
+  blocks: (KnownBlock | Block)[];
   close?: PlainTextElement;
   submit?: PlainTextElement;
   private_metadata?: string;
+  callback_id?: string;
   clear_on_close?: boolean; // defaults to false
   notify_on_close?: boolean; // defaults to false
-  submit_disabled?: boolean; // defaults to false
   external_id?: string;
 }
+
+interface WorkflowStepView {
+  type: 'workflow_step';
+  blocks: (KnownBlock | Block)[];
+  private_metadata?: string;
+  callback_id?: string;
+  submit_disabled?: boolean; // defaults to false
+}
+
+export type View = HomeView | ModalView | WorkflowStepView;
 
 /*
  * Block Elements
